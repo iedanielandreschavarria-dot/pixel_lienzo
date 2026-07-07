@@ -1,0 +1,63 @@
+-- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
+--
+-- Host: localhost    Database: pixel_lienzo_db
+-- ------------------------------------------------------
+-- Server version	8.0.45
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `historial_trazabilidad`
+--
+
+DROP TABLE IF EXISTS `historial_trazabilidad`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `historial_trazabilidad` (
+  `id_trazabilidad` int NOT NULL AUTO_INCREMENT,
+  `id_obra` int NOT NULL,
+  `id_propietario_anterior` int DEFAULT NULL,
+  `id_propietario_nuevo` int NOT NULL,
+  `id_transaccion` int DEFAULT NULL,
+  `fecha_cambio` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_trazabilidad`),
+  KEY `fk_trazabilidad_obra` (`id_obra`),
+  KEY `fk_trazabilidad_prop_ant` (`id_propietario_anterior`),
+  KEY `fk_trazabilidad_prop_nuev` (`id_propietario_nuevo`),
+  KEY `fk_trazabilidad_transaccion` (`id_transaccion`),
+  CONSTRAINT `fk_trazabilidad_obra` FOREIGN KEY (`id_obra`) REFERENCES `obra_arte` (`id_obra`) ON DELETE CASCADE,
+  CONSTRAINT `fk_trazabilidad_prop_ant` FOREIGN KEY (`id_propietario_anterior`) REFERENCES `usuario` (`id_usuario`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_trazabilidad_prop_nuev` FOREIGN KEY (`id_propietario_nuevo`) REFERENCES `usuario` (`id_usuario`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_trazabilidad_transaccion` FOREIGN KEY (`id_transaccion`) REFERENCES `transaccion` (`id_transaccion`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `historial_trazabilidad`
+--
+
+LOCK TABLES `historial_trazabilidad` WRITE;
+/*!40000 ALTER TABLE `historial_trazabilidad` DISABLE KEYS */;
+INSERT INTO `historial_trazabilidad` VALUES (1,1,NULL,26,1,'2026-06-17 19:54:51'),(2,2,NULL,27,2,'2026-06-17 19:54:51'),(3,3,NULL,28,3,'2026-06-17 19:54:51'),(4,4,NULL,29,4,'2026-06-17 19:54:51'),(5,5,NULL,30,5,'2026-06-17 19:54:51'),(6,6,NULL,31,6,'2026-06-17 19:54:51'),(7,7,NULL,32,7,'2026-06-17 19:54:51'),(8,8,NULL,33,8,'2026-06-17 19:54:51'),(9,9,NULL,34,9,'2026-06-17 19:54:51'),(10,10,NULL,35,10,'2026-06-17 19:54:51'),(11,11,NULL,36,11,'2026-06-17 19:54:51'),(12,12,NULL,37,12,'2026-06-17 19:54:51'),(13,13,NULL,38,13,'2026-06-17 19:54:51'),(14,14,NULL,39,14,'2026-06-17 19:54:51'),(15,15,NULL,40,15,'2026-06-17 19:54:51'),(16,16,NULL,41,16,'2026-06-17 19:54:51'),(17,17,NULL,42,17,'2026-06-17 19:54:51'),(18,18,NULL,43,18,'2026-06-17 19:54:51'),(19,19,NULL,44,19,'2026-06-17 19:54:51'),(20,20,NULL,45,20,'2026-06-17 19:54:51'),(21,21,NULL,26,21,'2026-06-18 10:00:47'),(22,22,NULL,27,22,'2026-06-18 10:00:47'),(23,23,NULL,28,23,'2026-06-18 10:00:47'),(24,24,NULL,29,24,'2026-06-18 10:00:47'),(25,25,NULL,30,25,'2026-06-18 10:00:47'),(26,26,NULL,31,26,'2026-06-18 10:00:47'),(27,27,NULL,32,27,'2026-06-18 10:00:47'),(28,28,NULL,33,28,'2026-06-18 10:00:47'),(29,29,NULL,34,29,'2026-06-18 10:00:47'),(30,30,NULL,35,30,'2026-06-18 10:00:47'),(31,31,NULL,36,31,'2026-06-18 10:00:47'),(32,32,NULL,37,32,'2026-06-18 10:00:47'),(33,33,NULL,38,33,'2026-06-18 10:00:47'),(34,34,NULL,39,34,'2026-06-18 10:00:47'),(35,35,NULL,40,35,'2026-06-18 10:00:47'),(36,36,NULL,41,36,'2026-06-18 10:00:47'),(37,37,NULL,42,37,'2026-06-18 10:00:47'),(38,38,NULL,43,38,'2026-06-18 10:00:47'),(39,39,NULL,44,39,'2026-06-18 10:00:47'),(40,40,NULL,45,40,'2026-06-18 10:00:47'),(41,41,NULL,26,41,'2026-06-18 10:00:47'),(42,42,NULL,27,42,'2026-06-18 10:00:47'),(43,43,NULL,28,43,'2026-06-18 10:00:47'),(44,44,NULL,29,44,'2026-06-18 10:00:47'),(45,45,NULL,30,45,'2026-06-18 10:00:47'),(46,46,NULL,31,46,'2026-06-18 10:00:47'),(47,47,NULL,32,47,'2026-06-18 10:00:47'),(48,48,NULL,33,48,'2026-06-18 10:00:47'),(49,49,NULL,34,49,'2026-06-18 10:00:47'),(50,50,NULL,35,50,'2026-06-18 10:00:47');
+/*!40000 ALTER TABLE `historial_trazabilidad` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-07-06 12:14:48
