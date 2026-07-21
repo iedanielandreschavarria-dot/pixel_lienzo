@@ -10,6 +10,7 @@ from app.models.transaccion import Transaccion
 from app.models.historial_trazabilidad import HistorialTrazabilidad
 from app.models.envio_logistica import EnvioLogistica
 from app.models.reclamacion import Reclamacion
+from app.models.configuracion_sistema import ConfiguracionSistema
 
 __all__ = [
     "Rol",
@@ -24,4 +25,5 @@ __all__ = [
     "HistorialTrazabilidad",
     "EnvioLogistica",
     "Reclamacion",
+    "ConfiguracionSistema",
 ]

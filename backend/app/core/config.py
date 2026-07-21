@@ -68,6 +68,32 @@ class Settings(BaseSettings):
     # de la obra referenciada por el QR físico, etc.)
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # URL pública en la que corre ESTE backend, usada para construir las URLs
+    # de los archivos servidos desde /static (fotografías de obras, previews
+    # con marca de agua, documentos de identidad de artistas).
+    BACKEND_BASE_URL: str = "http://localhost:8000"
+
+    # Almacenamiento de archivos subidos (fotografías de obras, documentos de
+    # identidad). En este entorno se guardan en disco local bajo UPLOAD_DIR y
+    # se sirven vía StaticFiles en `/static` (ver app/main.py). Para producción
+    # con múltiples instancias, migrar a almacenamiento compartido (S3/Azure Blob).
+    UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE_MB: int = 10
+
+    # Pasarela de pago: Wompi (Colombia). Usamos el "Web Checkout" (redirect
+    # hospedado por Wompi, ver app/services/wompi_service.py): el backend
+    # nunca toca datos de tarjeta. Llaves de prueba/producción en el
+    # dashboard de comercios de Wompi (https://comercios.wompi.co).
+    WOMPI_PUBLIC_KEY: str = ""
+    WOMPI_PRIVATE_KEY: str = ""
+    # "Firma de integridad": protege reference/amount/currency del checkout.
+    WOMPI_INTEGRITY_SECRET: str = ""
+    # "Secreto de eventos": valida la firma de los webhooks entrantes.
+    WOMPI_EVENTS_SECRET: str = ""
+    WOMPI_CHECKOUT_URL: str = "https://checkout.wompi.co/p/"
+    # Sandbox por defecto; cambiar a https://production.wompi.co/v1 en vivo.
+    WOMPI_API_BASE_URL: str = "https://sandbox.wompi.co/v1"
+
     # CORS: orígenes permitidos para el frontend en React
     # (Create React App usa :3000, Vite usa :5173 por defecto)
     # `NoDecode` evita que pydantic-settings intente un json.loads() automático

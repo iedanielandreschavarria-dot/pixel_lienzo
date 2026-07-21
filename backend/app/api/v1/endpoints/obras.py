@@ -17,6 +17,7 @@ from app.schemas.obra import ObraCreate, ObraEstadoUpdate, ObraOut, ObraUpdate
 from app.services.audit_service import ACCION_VALIDACION_OBRA, log_action
 from app.services.email_service import enviar_resultado_validacion_obra
 from app.services.trust_engine import generar_imagen_qr_png, url_publica_obra
+from app.services.watermark_service import generar_preview_con_marca_agua
 
 router = APIRouter()
 
@@ -89,10 +90,9 @@ def registrar_obra(
     db.add(obra)
     db.commit()
     db.refresh(obra)
-    # Nota: la marca de agua sobre la previsualización (RF 2.1.1) requiere
-    # manejo de subida de archivos (hoy `fotografia_hd_url` es solo una URL
-    # externa); queda pendiente para cuando se incorpore almacenamiento de
-    # imágenes propio (local/S3) con un endpoint de upload dedicado.
+    # La marca de agua (RF 2.1.1) no se pre-calcula ni se guarda: se genera al
+    # vuelo a partir de `fotografia_hd_url` cada vez que se pide
+    # `GET /obras/{id}/preview`, igual que los códigos QR.
     return obra
 
 
@@ -184,3 +184,16 @@ def obtener_qr_obra(id_obra: int, db: Session = Depends(get_db)):
             detail="La obra aún no tiene código QR (debe estar publicada)",
         )
     return Response(content=generar_imagen_qr_png(obra.codigo_qr_obra), media_type="image/png")
+
+
+@router.get("/{id_obra}/preview", response_class=Response, responses={200: {"content": {"image/jpeg": {}}}})
+def obtener_preview_obra(id_obra: int, db: Session = Depends(get_db)):
+    """RF 2.1.1 — Previsualización pública con marca de agua, generada al
+    vuelo a partir de `fotografia_hd_url`. Este es el endpoint que debe
+    usarse en el catálogo público en vez de exponer la fotografía en alta
+    resolución sin protección."""
+    obra = db.get(ObraArte, id_obra)
+    if obra is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Obra no encontrada")
+    imagen_jpeg = generar_preview_con_marca_agua(obra.fotografia_hd_url)
+    return Response(content=imagen_jpeg, media_type="image/jpeg")

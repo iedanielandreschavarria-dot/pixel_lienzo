@@ -9,7 +9,7 @@ class TransaccionCreate(BaseModel):
 
 
 class TransaccionEstadoUpdate(BaseModel):
-    estado_pago: str  # Procesando | Confirmado | Dispersado | Reembolsado
+    estado_pago: str  # Procesando | Confirmado | Dispersado | Reembolsado | Rechazado
 
 
 class ComisionUpdate(BaseModel):
@@ -18,6 +18,7 @@ class ComisionUpdate(BaseModel):
 
 class ComisionOut(BaseModel):
     porcentaje: Decimal
+    actualizado_en: datetime | None = None
 
 
 class TransaccionOut(BaseModel):
@@ -33,3 +34,20 @@ class TransaccionOut(BaseModel):
     monto_comision_galeria: Decimal
     impuestos_retenciones: Decimal
     estado_pago: str
+    referencia_pasarela: str | None = None
+
+
+class TransaccionCreadaOut(TransaccionOut):
+    """Respuesta de `POST /transacciones`: incluye la URL de pago de Wompi
+    a la que el frontend debe redirigir al comprador."""
+
+    checkout_url: str
+
+
+class CheckoutWompiOut(BaseModel):
+    checkout_url: str
+    referencia: str
+
+
+class WebhookRespuesta(BaseModel):
+    mensaje: str

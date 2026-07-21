@@ -15,3 +15,4 @@ bcrypt==4.0.1
 python-multipart==0.0.20
 alembic==1.14.0
 qrcode[pil]==8.0
+pillow==12.3.0

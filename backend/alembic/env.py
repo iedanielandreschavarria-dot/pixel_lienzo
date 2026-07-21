@@ -55,7 +55,8 @@ def run_migrations_offline() -> None:
 
 
 def _seed_datos_maestros(connection) -> None:
-    """Inserta los datos maestros obligatorios (roles) apenas se aplica la migración.
+    """Inserta los datos maestros obligatorios (roles, configuración del
+    sistema) apenas se aplica la migración.
 
     Se ejecuta con la misma conexión ya usada por Alembic, en una transacción
     aparte. Es completamente idempotente (ver app/db/seed.py), por lo que es
@@ -63,7 +64,7 @@ def _seed_datos_maestros(connection) -> None:
     """
     from sqlalchemy.orm import Session
 
-    from app.db.seed import seed_roles
+    from app.db.seed import seed_configuracion_sistema, seed_roles
 
     session = Session(bind=connection)
     try:
@@ -73,6 +74,17 @@ def _seed_datos_maestros(connection) -> None:
     except Exception as exc:  # tabla Rol puede no existir tras un downgrade, por ejemplo
         session.rollback()
         print(f"[seed] Aviso: no se pudo aplicar el seed de roles ({exc})")
+    finally:
+        session.close()
+
+    session = Session(bind=connection)
+    try:
+        configuracion = seed_configuracion_sistema(session)
+        if configuracion:
+            print("[seed] Fila de configuración del sistema insertada automáticamente.")
+    except Exception as exc:  # tabla configuracion_sistema puede no existir tras un downgrade
+        session.rollback()
+        print(f"[seed] Aviso: no se pudo aplicar el seed de configuración del sistema ({exc})")
     finally:
         session.close()
 

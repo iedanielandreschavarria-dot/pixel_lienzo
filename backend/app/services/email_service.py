@@ -126,6 +126,37 @@ def enviar_notificacion_dispersion(to: str, titulo_obra: str, monto_neto: str) -
     )
 
 
+def enviar_confirmacion_envio(to: str, titulo_obra: str, guia_transporte: str, tipo_envio: str) -> None:
+    send_email(
+        to=to,
+        subject="Tu obra va en camino — Pixel y Lienzo",
+        body=(
+            f"Se generó el envío ({tipo_envio}) de tu obra '{titulo_obra}'.\n\n"
+            f"Número de guía: {guia_transporte}\n\n"
+            f"Podrás hacer seguimiento del estado de tu envío desde tu cuenta."
+        ),
+    )
+
+
+def enviar_actualizacion_envio(to: str, titulo_obra: str, nuevo_estado: str) -> None:
+    send_email(
+        to=to,
+        subject=f"Actualización de tu envío: {nuevo_estado} — Pixel y Lienzo",
+        body=f"El estado de envío de tu obra '{titulo_obra}' cambió a: {nuevo_estado}.",
+    )
+
+
+def enviar_resultado_reclamacion(to: str, titulo_obra: str, estado_resolucion: str) -> None:
+    send_email(
+        to=to,
+        subject="Resultado de tu reclamación — Pixel y Lienzo",
+        body=(
+            f"Tu reclamación sobre la obra '{titulo_obra}' fue resuelta.\n\n"
+            f"Resultado: {estado_resolucion}"
+        ),
+    )
+
+
 def enviar_resultado_validacion_obra(to: str, titulo_obra: str, aprobada: bool, motivo: str | None = None) -> None:
     if aprobada:
         body = f"Tu obra '{titulo_obra}' fue aprobada por curaduría y ya está publicada en el catálogo."

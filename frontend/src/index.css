@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Playfair Display", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Dark premium — sala de exposición de noche: fondos casi negros,
+     superficies en antracita y un único acento metálico (oro). Las obras
+     son las únicas protagonistas de color; la UI se mantiene deliberadamente
+     apagada alrededor de ellas. */
+  --color-carbon: #0c0c0e; /* fondo base de la página */
+  --color-carbon-suave: #16161a; /* fondo elevado: header/footer/hero */
+  --color-antracita: #1d1d21; /* superficies: tarjetas, inputs */
+  --color-antracita-suave: #2b2b30; /* bordes / hover de superficies */
+  --color-marfil: #f4efe6; /* texto principal (marfil cálido) */
+  --color-marfil-suave: #9c968c; /* texto secundario / metadatos */
+  --color-ocre: #c9a24b; /* acento metálico dorado — CTA, precios, estados activos */
+  --color-ocre-suave: #e2c589; /* dorado claro — hover del acento */
+  --color-terracota: #c2564a; /* error / rechazo */
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-carbon);
+    color: var(--color-marfil);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+  }
+
+  ::selection {
+    background-color: var(--color-ocre);
+    color: var(--color-carbon);
+  }
+
+  /* Scrollbar discreta, coherente con el resto del "chrome" oscuro. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-carbon);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-antracita-suave);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-marfil-suave);
+  }
+}
+
+@layer utilities {
+  /* Grid tipo "masonry" sin JS: columnas CSS + cada tarjeta evita romperse
+     entre columnas. Deja que la relación de aspecto real de cada fotografía
+     defina la altura, en vez de forzar recortes uniformes. */
+  .galeria-masonry {
+    column-count: 1;
+    column-gap: 1.5rem;
+  }
+  @media (min-width: 640px) {
+    .galeria-masonry {
+      column-count: 2;
+    }
+  }
+  @media (min-width: 1024px) {
+    .galeria-masonry {
+      column-count: 3;
+    }
+  }
+  @media (min-width: 1536px) {
+    .galeria-masonry {
+      column-count: 4;
+    }
+  }
+  .galeria-masonry > * {
+    break-inside: avoid;
+  }
+}

@@ -8,14 +8,16 @@ Ejecutar en desarrollo:
 import logging
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.db.seed import seed_roles
+from app.db.seed import seed_configuracion_sistema, seed_roles
 
 # La consola de Windows suele usar una codepage heredada (p. ej. cp1252) en
 # vez de UTF-8, lo que corrompe visualmente acentos/ñ en los logs (aunque los
@@ -51,11 +53,12 @@ async def lifespan(app: FastAPI):
         db = SessionLocal()
         try:
             seed_roles(db)
+            seed_configuracion_sistema(db)
         finally:
             db.close()
     except Exception:
         logger.warning(
-            "No se pudo verificar/insertar los roles iniciales al arrancar "
+            "No se pudo verificar/insertar los datos maestros iniciales al arrancar "
             "(¿la base de datos está disponible y migrada?).",
             exc_info=True,
         )
@@ -72,18 +75,30 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configuración de CORS para permitir la conexión del futuro frontend en React
-# (Create React App: :3000, Vite: :5173). Ajustar BACKEND_CORS_ORIGINS en el
-# archivo .env cuando se despliegue a un dominio real.
+# Configuración de CORS para permitir la conexión del frontend en React
+# (Vite: :5173). Ajustar BACKEND_CORS_ORIGINS en el archivo .env cuando se
+# despliegue a un dominio real.
+#
+# `AnyHttpUrl` normaliza las URLs agregando una barra final
+# (p.ej. "http://localhost:5173/"), pero la cabecera `Origin` que envía el
+# navegador nunca la incluye ("http://localhost:5173") — sin el `.rstrip("/")`
+# el middleware jamás encuentra coincidencia y bloquea todas las peticiones
+# cross-origin reales del frontend.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_origins=[str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Archivos subidos (fotografías de obras, documentos de identidad) — ver
+# app/services/storage_service.py. Se crea el directorio si no existe para
+# que el montaje no falle en un checkout limpio del repositorio.
+Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=settings.UPLOAD_DIR), name="static")
 
 
 @app.get("/", tags=["Root"])

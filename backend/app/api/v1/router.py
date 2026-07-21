@@ -5,6 +5,7 @@ un módulo funcional descrito en la documentación de requisitos.
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    archivos,
     artistas,
     auditoria,
     auth,
@@ -29,6 +30,7 @@ api_router.include_router(auditoria.router, prefix="/auditoria", tags=["Auditor�
 api_router.include_router(artistas.router, prefix="/artistas", tags=["Artistas"])
 api_router.include_router(categorias.router, prefix="/categorias", tags=["Categorías"])
 api_router.include_router(obras.router, prefix="/obras", tags=["Obras / Catálogo"])
+api_router.include_router(archivos.router, prefix="/archivos", tags=["Archivos"])
 
 # Módulo 5: Motor de Confianza (Trust Engine)
 api_router.include_router(certificados.router, prefix="/certificados", tags=["Certificados de Autenticidad"])
