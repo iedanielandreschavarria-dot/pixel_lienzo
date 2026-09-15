@@ -252,14 +252,44 @@ Detalles de implementación (`app/services/wompi_service.py`):
   la transacción ya no está en `Procesando`, se responde `200 OK` sin
   reprocesar nada.
 
-Variables de entorno necesarias (ver `.env.example`): `WOMPI_PUBLIC_KEY`,
-`WOMPI_PRIVATE_KEY` (reservada para uso futuro, no la usa el flujo actual),
-`WOMPI_INTEGRITY_SECRET`, `WOMPI_EVENTS_SECRET`, `WOMPI_CHECKOUT_URL` y
-`WOMPI_API_BASE_URL`. Todas se consiguen en el dashboard de comercios de
-Wompi (https://comercios.wompi.co → sección de llaves/secretos). En
-desarrollo, usa las llaves de **sandbox** (`pub_test_...`/`prv_test_...`) y
-expón tu backend local a internet (p. ej. con `ngrok`) para que Wompi pueda
-alcanzar tu webhook.
+### Cómo activar la pasarela
+
+1. Crea una cuenta en el dashboard de comercios (https://comercios.wompi.co)
+   y activa el **modo sandbox** (Desarrollo → Programadores).
+2. Copia las cuatro credenciales a `.env`: `WOMPI_PUBLIC_KEY`,
+   `WOMPI_PRIVATE_KEY` (reservada para uso futuro, el flujo actual no la
+   usa), `WOMPI_INTEGRITY_SECRET` y `WOMPI_EVENTS_SECRET`. Los prefijos de
+   sandbox son `pub_test_`, `prv_test_`, `test_integrity_` y `test_events_`;
+   no mezcles credenciales de ambientes distintos. La URL del Web Checkout
+   es la misma en sandbox y producción: lo que decide el ambiente es el
+   prefijo de la llave pública.
+3. Reinicia el backend (`.env` se lee al arrancar).
+4. Para que Wompi pueda alcanzar el webhook necesitas una URL pública:
+   levanta un túnel (`ngrok http 8000`) y registra
+   `https://TU-TUNEL/api/v1/transacciones/webhook/wompi` como URL de eventos
+   en el dashboard.
+
+Mientras `WOMPI_PUBLIC_KEY` o `WOMPI_INTEGRITY_SECRET` estén vacíos,
+`POST /transacciones` responde **503** con un mensaje explícito en vez de
+reservar la obra y mandar al comprador a un checkout que Wompi rechazaría.
+
+### Probar el webhook sin túnel
+
+`scripts/simular_webhook_wompi.py` firma un evento `transaction.updated`
+idéntico al de Wompi (usando `WOMPI_EVENTS_SECRET`) y lo entrega al webhook
+local, así que se puede validar la confirmación del pago sin exponer el
+backend a internet:
+
+```bash
+python scripts/simular_webhook_wompi.py 12                      # pago aprobado
+python scripts/simular_webhook_wompi.py 12 --estado DECLINED    # pago rechazado
+python scripts/simular_webhook_wompi.py 12 --firma-invalida     # debe responder 400
+python scripts/simular_webhook_wompi.py 12 --monto-en-centavos 999
+```
+
+Valida nuestro lado de la integración (firma, idempotencia, defensa contra
+monto alterado y efectos en base de datos), no que Wompi acepte el checkout
+que construimos: eso solo se comprueba contra el sandbox real.
 
 ### Correo en desarrollo
 
@@ -273,4 +303,9 @@ alcanzar tu webhook.
 
 ### Pendiente
 
-Los 5 módulos principales (Identidad, Catálogo, Pagos + pasarela Wompi, Logística) y el Trust Engine ya tienen lógica de negocio real implementada, incluyendo persistencia real de la configuración (`configuracion_sistema`) y un estado `Rechazado` para pagos fallidos de la pasarela. Como siguiente iteración quedaría: probar el webhook de Wompi con credenciales de sandbox reales (requiere exponer el backend a internet, p. ej. con `ngrok`, y configurar la URL del evento en el dashboard de Wompi).
+Los 5 módulos principales (Identidad, Catálogo, Pagos + pasarela Wompi, Logística) y el Trust Engine ya tienen lógica de negocio real implementada, incluyendo persistencia real de la configuración (`configuracion_sistema`) y un estado `Rechazado` para pagos fallidos de la pasarela. El webhook está verificado localmente con `scripts/simular_webhook_wompi.py` (firma válida e inválida, monto alterado e idempotencia); falta la prueba contra el sandbox real de Wompi, que requiere credenciales propias y un túnel público.
+
+Dos comportamientos del flujo de pago que conviene resolver antes de ir a producción:
+
+- **Checkout abandonado**: si el comprador cierra la pestaña sin pagar, Wompi no emite ningún evento, así que la obra queda en `Reservado` indefinidamente. Hay que enviar `expiration-time` en el checkout y liberar por tarea programada las reservas vencidas.
+- **Trazabilidad prematura**: `POST /transacciones` inserta el registro en `historial_trazabilidad` al iniciar el checkout, no al confirmarse el pago, de modo que un pago fallido o abandonado deja igualmente una transferencia de propiedad en el historial público. Debería moverse a `_confirmar_pago`.

@@ -1,35 +1,121 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ShieldCheck, QrCode, ArrowLeft } from "lucide-react";
-import { obtenerObra, urlPreviewObra, urlQrObra } from "../api/obras";
+import { ArrowLeft, BadgeCheck, FileText, QrCode, ShieldCheck, ShieldOff } from "lucide-react";
+import { obtenerObra, obtenerObraPorUid, urlPreviewObra, urlQrObra } from "../api/obras";
 import { obtenerPerfilArtista } from "../api/artistas";
+import { obtenerCertificado, urlQrCertificado } from "../api/certificados";
+import { obtenerTrazabilidad } from "../api/trazabilidad";
 import { crearTransaccion } from "../api/transacciones";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { Button } from "../components/ui/Button";
 import { BadgeEstadoObra } from "../components/ui/Badge";
 import { Spinner } from "../components/ui/Spinner";
-import { formatearMoneda } from "../lib/formato";
+import { LineaTrazabilidad } from "../components/LineaTrazabilidad";
+import { formatearFecha, formatearMoneda } from "../lib/formato";
 import { obtenerMensajeError } from "../api/client";
+import type { Certificado } from "../types";
+
+function BloqueCertificado({ certificado }: { certificado: Certificado }) {
+  return (
+    <div className="rounded-lg border border-ocre/30 bg-ocre/5 p-6">
+      <div className="flex flex-wrap items-start justify-between gap-6">
+        <div>
+          <p className="flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.16em] text-ocre">
+            <BadgeCheck size={14} /> Certificado de autenticidad
+          </p>
+          <p className="mt-2 text-sm text-marfil">
+            Emitido el {formatearFecha(certificado.sello_tiempo)}
+          </p>
+          {certificado.codigo_qr_validacion && (
+            <>
+              <p className="mt-4 text-xs uppercase tracking-wider text-marfil-suave/70">Sello SHA-256</p>
+              <p className="mt-1 max-w-md break-all font-mono text-[0.7rem] leading-relaxed text-marfil-suave">
+                {certificado.codigo_qr_validacion}
+              </p>
+            </>
+          )}
+          <div className="mt-5 flex flex-wrap items-center gap-4">
+            <a
+              href={certificado.pdf_certificado_url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-ocre hover:underline"
+            >
+              <FileText size={16} /> Descargar certificado
+            </a>
+            {certificado.codigo_qr_validacion && (
+              <Link
+                to={`/verificar/${certificado.codigo_qr_validacion}`}
+                className="inline-flex items-center gap-2 text-sm text-marfil-suave hover:text-ocre"
+              >
+                <ShieldCheck size={16} /> Verificar autenticidad
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {certificado.codigo_qr_validacion && (
+          <div className="shrink-0">
+            {/* El QR es denso (codifica el sello de 64 caracteres), así que se
+                enlaza al PNG a tamaño completo para poder escanearlo. */}
+            <a href={urlQrCertificado(certificado.id_obra)} target="_blank" rel="noreferrer">
+              <img
+                src={urlQrCertificado(certificado.id_obra)}
+                alt="Código QR de validación del certificado"
+                className="h-32 w-32 rounded-md bg-marfil p-2 transition-transform duration-300 hover:scale-105"
+              />
+            </a>
+            <p className="mt-2 text-center text-[0.65rem] uppercase tracking-wider text-marfil-suave/70">
+              Validación
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function ObraDetallePage() {
   const { idObra } = useParams<{ idObra: string }>();
-  const id = Number(idObra);
   const { user } = useAuth();
   const { notificar } = useToast();
   const navigate = useNavigate();
   const [comprando, setComprando] = useState(false);
 
+  // El parámetro puede ser la clave primaria (enlaces internos del catálogo) o
+  // el UID de la pieza, que es lo que codifican los QR físicos junto a la obra.
+  const esIdNumerico = /^\d+$/.test(idObra ?? "");
+
   const {
     data: obra,
     isLoading,
     isError,
-  } = useQuery({ queryKey: ["obra", id], queryFn: () => obtenerObra(id), enabled: !Number.isNaN(id) });
+  } = useQuery({
+    queryKey: esIdNumerico ? ["obra", Number(idObra)] : ["obra-uid", idObra],
+    queryFn: () => (esIdNumerico ? obtenerObra(Number(idObra)) : obtenerObraPorUid(idObra!)),
+    enabled: !!idObra,
+  });
 
   const { data: perfilArtista } = useQuery({
     queryKey: ["artista", obra?.id_artista],
     queryFn: () => obtenerPerfilArtista(obra!.id_artista),
+    enabled: !!obra,
+  });
+
+  // El certificado solo existe si el curador lo emitió: un 404 es un resultado
+  // esperado, no un error que deba reintentarse.
+  const { data: certificado } = useQuery({
+    queryKey: ["certificado", obra?.id_obra],
+    queryFn: () => obtenerCertificado(obra!.id_obra),
+    enabled: !!obra,
+    retry: false,
+  });
+
+  const { data: trazabilidad } = useQuery({
+    queryKey: ["trazabilidad", obra?.id_obra],
+    queryFn: () => obtenerTrazabilidad(obra!.id_obra),
     enabled: !!obra,
   });
 
@@ -49,7 +135,7 @@ export function ObraDetallePage() {
 
   const comprar = async () => {
     if (!user) {
-      navigate("/login", { state: { from: { pathname: `/obras/${id}` } } });
+      navigate("/login", { state: { from: { pathname: `/obras/${obra.id_obra}` } } });
       return;
     }
     if (user.rol !== "Comprador") {
@@ -75,9 +161,6 @@ export function ObraDetallePage() {
       </div>
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-16 px-6 py-10 sm:px-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-        {/* La obra ocupa el máximo espacio posible, sin recortes forzados;
-            un halo dorado muy sutil enmarca la pieza como en una sala con
-            iluminación dirigida. */}
         <div className="relative">
           <div
             className="pointer-events-none absolute -inset-8 -z-10 opacity-60 blur-3xl"
@@ -167,6 +250,44 @@ export function ObraDetallePage() {
           )}
         </div>
       </div>
+
+      <section className="mx-auto max-w-7xl px-6 pb-24 sm:px-10">
+        <div className="grid grid-cols-1 gap-12 border-t border-antracita-suave/60 pt-14 lg:grid-cols-2">
+          <div>
+            <h2 className="font-[var(--font-display)] text-2xl font-medium text-marfil">Autenticidad</h2>
+            <div className="mt-6">
+              {certificado ? (
+                <BloqueCertificado certificado={certificado} />
+              ) : (
+                <div className="flex items-start gap-3 rounded-lg border border-antracita-suave bg-antracita p-6">
+                  <ShieldOff size={20} className="mt-0.5 shrink-0 text-marfil-suave" />
+                  <div>
+                    <p className="font-medium text-marfil">Certificado pendiente de emisión</p>
+                    <p className="mt-1 text-sm leading-relaxed text-marfil-suave">
+                      El equipo curatorial aún no ha emitido el certificado de autenticidad de esta pieza. Se
+                      publicará aquí, junto con su sello criptográfico y su código QR de validación.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="font-[var(--font-display)] text-2xl font-medium text-marfil">Trazabilidad</h2>
+            <p className="mt-2 text-sm leading-relaxed text-marfil-suave">
+              Historial de propiedad de la pieza, registrado de forma incremental por la galería.
+            </p>
+            <div className="mt-7">
+              {trazabilidad ? (
+                <LineaTrazabilidad registros={trazabilidad} idArtista={obra.id_artista} />
+              ) : (
+                <Spinner etiqueta="" />
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -10,7 +10,13 @@ from app.core.database import get_db
 from app.models.certificado_autenticidad import CertificadoAutenticidad
 from app.models.obra_arte import ObraArte
 from app.models.usuario import Usuario
-from app.schemas.certificado import CertificadoCreate, CertificadoOut
+from app.schemas.certificado import (
+    CertificadoCreate,
+    CertificadoOut,
+    CertificadoVerificacionOut,
+    ObraCertificadaOut,
+)
+from app.schemas.obra import ObraOut
 from app.services.audit_service import ACCION_EMISION_CERTIFICADO, log_action
 from app.services.trust_engine import (
     generar_imagen_qr_png,
@@ -65,6 +71,61 @@ def emitir_certificado(
         tabla="certificado_autenticidad",
     )
     return certificado
+
+
+@router.get(
+    "/pendientes",
+    response_model=list[ObraOut],
+    dependencies=[Depends(require_roles(ROL_CURADOR))],
+)
+def listar_obras_sin_certificado(db: Session = Depends(get_db)):
+    """Obras que ya superaron la curaduría pero aún no tienen certificado.
+
+    Se declara antes de `/{id_obra}` porque ese parámetro es `int` y una ruta
+    literal posterior nunca alcanzaría a resolverse.
+    """
+    return (
+        db.query(ObraArte)
+        .filter(ObraArte.estado_obra != "Pendiente", ~ObraArte.certificado.has())
+        .order_by(ObraArte.id_obra.desc())
+        .all()
+    )
+
+
+@router.get("/verificar/{sello}", response_model=CertificadoVerificacionOut)
+def verificar_certificado(sello: str, db: Session = Depends(get_db)):
+    """Verificación pública de un certificado a partir de su sello SHA-256.
+
+    Es el destino del QR de validación del Trust Engine (ver
+    `trust_engine.url_validacion_certificado`), que codifica
+    `{FRONTEND_URL}/verificar/{sello}`.
+
+    Además de localizar el certificado, recalcula el sello con la ficha técnica
+    actual de la obra y la firma del curador: si el resultado no coincide con el
+    sello almacenado, significa que algún dato certificado se modificó después
+    de la emisión y `sello_valido` viaja en `false`.
+    """
+    certificado = (
+        db.query(CertificadoAutenticidad)
+        .filter(CertificadoAutenticidad.codigo_qr_validacion == sello)
+        .first()
+    )
+    if certificado is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No existe ningún certificado con este sello de autenticidad",
+        )
+
+    obra = db.get(ObraArte, certificado.id_obra)
+    if obra is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Obra no encontrada")
+
+    sello_recalculado = generar_sello_sha256(obra, certificado.firma_digital_curador)
+    return CertificadoVerificacionOut(
+        sello_valido=sello_recalculado == certificado.codigo_qr_validacion,
+        certificado=CertificadoOut.model_validate(certificado),
+        obra=ObraCertificadaOut.model_validate(obra),
+    )
 
 
 @router.get("/{id_obra}", response_model=CertificadoOut)

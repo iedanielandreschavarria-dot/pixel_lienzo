@@ -34,6 +34,7 @@ from app.services.audit_service import ACCION_CONFIG_COMISION, ACCION_DISPERSION
 from app.services.email_service import enviar_notificacion_dispersion, enviar_notificacion_venta
 from app.services.pagos_service import reembolsar_transaccion
 from app.services.wompi_service import (
+    checkout_configurado,
     construir_url_checkout,
     generar_referencia,
     id_transaccion_desde_referencia,
@@ -94,6 +95,17 @@ def _url_retorno_frontend(id_transaccion: int) -> str:
     return f"{settings.FRONTEND_URL}/compras/{id_transaccion}/resultado"
 
 
+def _exigir_pasarela_configurada() -> None:
+    if not checkout_configurado():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "La pasarela de pago no está configurada. Define WOMPI_PUBLIC_KEY y "
+                "WOMPI_INTEGRITY_SECRET en el archivo .env del backend."
+            ),
+        )
+
+
 @router.post(
     "",
     response_model=TransaccionCreadaOut,
@@ -115,6 +127,10 @@ def crear_transaccion(
     El frontend debe redirigir al comprador a `checkout_url`. La
     confirmación real del pago llega después, de forma asíncrona, vía
     `POST /transacciones/webhook/wompi`."""
+    # Se valida antes de tocar la obra: no tiene sentido reservar una pieza
+    # si después no vamos a poder cobrarla.
+    _exigir_pasarela_configurada()
+
     obra = db.query(ObraArte).filter(ObraArte.id_obra == payload.id_obra).with_for_update().first()
     if obra is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Obra no encontrada")
@@ -172,6 +188,8 @@ def obtener_checkout_wompi(
     ej. si el comprador cerró la pestaña de pago sin completarlo). Cada
     llamada genera una nueva `reference` de Wompi, pero todas resuelven al
     mismo `id_transaccion` al recibir el webhook."""
+    _exigir_pasarela_configurada()
+
     transaccion = db.get(Transaccion, id_transaccion)
     if transaccion is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transacción no encontrada")

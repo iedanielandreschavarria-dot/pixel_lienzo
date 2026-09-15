@@ -10,13 +10,13 @@ interface AccessTokenClaims {
   exp: number;
 }
 
-type ResultadoLogin = { requiereMfa: true } | { requiereMfa: false };
+type ResultadoLogin = { requiereMfa: true } | { requiereMfa: false; rol: NombreRol | null };
 
 interface AuthContextValue {
   user: AuthUser | null;
   cargando: boolean;
   login: (correo: string, contrasenia: string) => Promise<ResultadoLogin>;
-  completarMfa: (correo: string, codigo: string) => Promise<void>;
+  completarMfa: (correo: string, codigo: string) => Promise<NombreRol | null>;
   logout: () => Promise<void>;
   refrescarUsuario: () => Promise<void>;
 }
@@ -68,13 +68,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     tokenStorage.setTokens(respuesta.access_token, respuesta.refresh_token);
     await cargarUsuarioDesdeToken();
-    return { requiereMfa: false };
+    // Se devuelve el rol porque el estado `user` todavía no está visible para
+    // quien llamó a `login` en este mismo ciclo de render, y las páginas lo
+    // necesitan para decidir a qué panel redirigir.
+    return { requiereMfa: false, rol: decodificarRol(respuesta.access_token) };
   }, [cargarUsuarioDesdeToken]);
 
   const completarMfa = useCallback(async (correo: string, codigo: string) => {
     const respuesta = await authApi.verificarMfa(correo, codigo);
     tokenStorage.setTokens(respuesta.access_token, respuesta.refresh_token);
     await cargarUsuarioDesdeToken();
+    return decodificarRol(respuesta.access_token);
   }, [cargarUsuarioDesdeToken]);
 
   const logout = useCallback(async () => {

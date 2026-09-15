@@ -30,6 +30,17 @@ import urllib.parse
 from app.core.config import settings
 
 
+def checkout_configurado() -> bool:
+    """Indica si hay credenciales suficientes para generar un pago válido.
+
+    Sin ellas, `construir_url_checkout` produciría una URL con la llave
+    pública vacía y una firma calculada con un secreto vacío: Wompi la
+    rechazaría y el comprador vería una página de error de la pasarela, sin
+    pista de qué falló. Es preferible detectarlo antes de reservar la obra.
+    """
+    return bool(settings.WOMPI_PUBLIC_KEY and settings.WOMPI_INTEGRITY_SECRET)
+
+
 def generar_referencia(id_transaccion: int) -> str:
     return f"pyl-{id_transaccion}-{secrets.token_hex(4)}"
 

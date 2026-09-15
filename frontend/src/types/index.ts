@@ -35,12 +35,66 @@ export interface Obra {
   id_categoria: number;
 }
 
+/** Payload de `POST /obras`. Los montos van como string para no perder
+ * precisión decimal en el camino (el backend los recibe como `Decimal`). */
+export interface ObraCreatePayload {
+  titulo: string;
+  tecnica: string;
+  dimensiones: string;
+  peso: string;
+  anio_creacion: number | null;
+  precio_venta: string;
+  fotografia_hd_url: string;
+  id_categoria: number;
+}
+
+export type ObraUpdatePayload = Partial<ObraCreatePayload>;
+
+export type EstadoValidacion = "Pendiente" | "Verificado" | "Rechazado";
+
 export interface PerfilArtista {
   id_artista: number;
   biografia_profesional: string | null;
   documento_identidad_url: string;
-  estado_validacion: "Pendiente" | "Verificado" | "Rechazado";
+  estado_validacion: EstadoValidacion;
   motivos_rechazo: string | null;
+}
+
+export interface Certificado {
+  id_certificado: number;
+  id_obra: number;
+  sello_tiempo: string;
+  codigo_qr_validacion: string | null;
+  pdf_certificado_url: string;
+}
+
+/** Obra tal como la expone la verificación pública del sello: sin precio ni
+ * fotografía en alta resolución. */
+export interface ObraCertificada {
+  id_obra: number;
+  uid: string;
+  titulo: string;
+  tecnica: string;
+  dimensiones: string;
+  anio_creacion: number | null;
+  id_artista: number;
+}
+
+export interface VerificacionCertificado {
+  /** `false` cuando el sello recalculado sobre la ficha técnica actual ya no
+   * coincide con el emitido: indica que algún dato certificado se modificó. */
+  sello_valido: boolean;
+  certificado: Certificado;
+  obra: ObraCertificada;
+}
+
+export interface RegistroTrazabilidad {
+  id_trazabilidad: number;
+  id_obra: number;
+  id_propietario_anterior: number | null;
+  id_propietario_nuevo: number;
+  id_transaccion: number | null;
+  fecha_cambio: string;
 }
 
 export interface Usuario {

@@ -1,13 +1,38 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { LogOut, Menu, ShoppingBag, User, X } from "lucide-react";
+import { ClipboardCheck, LogOut, Menu, Palette, ShoppingBag, User, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../ui/Button";
+import type { NombreRol } from "../../types";
 
 const enlaceClase = ({ isActive }: { isActive: boolean }) =>
   `relative text-sm font-medium uppercase tracking-[0.14em] transition-colors hover:text-ocre after:absolute after:-bottom-1.5 after:left-0 after:h-px after:bg-ocre after:transition-all ${
     isActive ? "text-ocre after:w-full" : "text-marfil-suave after:w-0 hover:after:w-full"
   }`;
+
+interface Enlace {
+  to: string;
+  etiqueta: string;
+  end?: boolean;
+  icono?: LucideIcon;
+}
+
+/** Cada rol trabaja en un espacio distinto, así que la navegación se arma a
+ * partir del rol del usuario en vez de mostrar todo y ocultarlo con CSS. */
+function enlacesPorRol(rol: NombreRol | undefined): Enlace[] {
+  const enlaces: Enlace[] = [{ to: "/", etiqueta: "Catálogo", end: true }];
+  if (rol === "Comprador") {
+    enlaces.push({ to: "/mis-compras", etiqueta: "Mis compras", icono: ShoppingBag });
+  }
+  if (rol === "Artista") {
+    enlaces.push({ to: "/artista", etiqueta: "Mi portafolio", icono: Palette });
+  }
+  if (rol === "Curador") {
+    enlaces.push({ to: "/curaduria", etiqueta: "Curaduría", icono: ClipboardCheck });
+  }
+  return enlaces;
+}
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -28,6 +53,8 @@ export function Header() {
     navigate("/");
   };
 
+  const enlaces = enlacesPorRol(user?.rol);
+
   return (
     <header
       className={`sticky top-0 z-40 border-b transition-all duration-300 ${
@@ -41,14 +68,11 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-10 md:flex">
-          <NavLink to="/" className={enlaceClase} end>
-            Catálogo
-          </NavLink>
-          {user?.rol === "Comprador" && (
-            <NavLink to="/mis-compras" className={enlaceClase}>
-              Mis compras
+          {enlaces.map((enlace) => (
+            <NavLink key={enlace.to} to={enlace.to} className={enlaceClase} end={enlace.end}>
+              {enlace.etiqueta}
             </NavLink>
-          )}
+          ))}
         </nav>
 
         <div className="hidden items-center gap-4 md:flex">
@@ -87,16 +111,23 @@ export function Header() {
       {menuAbierto && (
         <div className="border-t border-antracita-suave bg-carbon px-6 py-6 md:hidden">
           <nav className="flex flex-col gap-5">
-            <NavLink to="/" className={enlaceClase} end onClick={() => setMenuAbierto(false)}>
-              Catálogo
-            </NavLink>
-            {user?.rol === "Comprador" && (
-              <NavLink to="/mis-compras" className={enlaceClase} onClick={() => setMenuAbierto(false)}>
-                <span className="flex items-center gap-1.5">
-                  <ShoppingBag size={15} /> Mis compras
-                </span>
-              </NavLink>
-            )}
+            {enlaces.map((enlace) => {
+              const Icono = enlace.icono;
+              return (
+                <NavLink
+                  key={enlace.to}
+                  to={enlace.to}
+                  className={enlaceClase}
+                  end={enlace.end}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {Icono && <Icono size={15} />}
+                    {enlace.etiqueta}
+                  </span>
+                </NavLink>
+              );
+            })}
             <hr className="border-antracita-suave" />
             {user ? (
               <>

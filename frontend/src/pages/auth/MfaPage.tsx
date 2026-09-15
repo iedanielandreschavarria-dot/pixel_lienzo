@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { AuthCard } from "./AuthCard";
 import { obtenerMensajeError } from "../../api/client";
+import { rutaInicialPorRol } from "../../lib/navegacion";
 
 interface FormValues {
   codigo: string;
@@ -30,8 +31,8 @@ export function MfaPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await completarMfa(state.correo!, values.codigo);
-      navigate(state.from ?? "/", { replace: true });
+      const rol = await completarMfa(state.correo!, values.codigo);
+      navigate(state.from ?? rutaInicialPorRol(rol), { replace: true });
     } catch (error) {
       notificar(obtenerMensajeError(error, "Código inválido o expirado"), "error");
     }

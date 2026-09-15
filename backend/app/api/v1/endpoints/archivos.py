@@ -9,7 +9,7 @@ los payloads JSON de esos endpoints.
 """
 from fastapi import APIRouter, Depends, UploadFile, File, status
 
-from app.api.deps import ROL_ARTISTA, require_roles
+from app.api.deps import ROL_ARTISTA, ROL_CURADOR, require_roles
 from app.schemas.common import ArchivoSubidoOut
 from app.services.storage_service import CONTENT_TYPES_DOCUMENTO, CONTENT_TYPES_IMAGEN, guardar_archivo
 
@@ -26,6 +26,20 @@ def subir_fotografia_obra(archivo: UploadFile = File(...)):
     """RF 2.1.1 — Sube la fotografía en alta resolución de una obra.
     Solo Artista. Devuelve la URL a usar como `fotografia_hd_url`."""
     url = guardar_archivo(archivo, subcarpeta="obras", permitidos=CONTENT_TYPES_IMAGEN)
+    return ArchivoSubidoOut(url=url)
+
+
+@router.post(
+    "/certificado",
+    response_model=ArchivoSubidoOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles(ROL_CURADOR))],
+)
+def subir_pdf_certificado(archivo: UploadFile = File(...)):
+    """Sube el PDF del certificado de autenticidad firmado. Solo Curador.
+    Devuelve la URL a usar como `pdf_certificado_url` en
+    `POST /certificados/{id_obra}`."""
+    url = guardar_archivo(archivo, subcarpeta="certificados", permitidos=CONTENT_TYPES_DOCUMENTO)
     return ArchivoSubidoOut(url=url)
 
 

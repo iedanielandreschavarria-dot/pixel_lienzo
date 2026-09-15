@@ -53,6 +53,44 @@ def listar_obras_pendientes(db: Session = Depends(get_db)):
     return db.query(ObraArte).filter(ObraArte.estado_obra == "Pendiente").all()
 
 
+@router.get(
+    "/mis-obras",
+    response_model=list[ObraOut],
+    dependencies=[Depends(require_roles(ROL_ARTISTA))],
+)
+def listar_mis_obras(
+    usuario: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Portafolio del artista autenticado, en cualquier estado.
+
+    `GET /obras` solo expone obras 'Publicado' (es el catálogo del comprador),
+    así que el artista necesita esta vista aparte para hacer seguimiento de las
+    piezas que aún están en revisión curatorial.
+    """
+    return (
+        db.query(ObraArte)
+        .filter(ObraArte.id_artista == usuario.id_usuario)
+        .order_by(ObraArte.id_obra.desc())
+        .all()
+    )
+
+
+@router.get("/uid/{uid}", response_model=ObraOut)
+def obtener_obra_por_uid(uid: str, db: Session = Depends(get_db)):
+    """Resuelve una obra por su UID público.
+
+    Es el complemento necesario del QR Engine: `codigo_qr_obra` apunta a
+    `{FRONTEND_URL}/obras/{uid}` (ver `trust_engine.url_publica_obra`), es decir
+    identifica la pieza por su UID y no por su clave primaria, para no exponer
+    IDs secuenciales en los códigos impresos junto a la obra.
+    """
+    obra = db.query(ObraArte).filter(ObraArte.uid == uid).first()
+    if obra is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Obra no encontrada")
+    return obra
+
+
 @router.get("/{id_obra}", response_model=ObraOut)
 def obtener_obra(id_obra: int, db: Session = Depends(get_db)):
     """Ficha técnica de la obra (destino tras escaneo de QR físico)."""

@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import type { EstadoObra, EstadoPago } from "../../types";
+import type { EstadoObra, EstadoPago, EstadoValidacion } from "../../types";
 
 const estilosEstadoObra: Record<EstadoObra, string> = {
   Publicado: "border-ocre/40 text-ocre",
@@ -37,4 +37,14 @@ export function BadgeEstadoObra({ estado }: { estado: EstadoObra }) {
 
 export function BadgeEstadoPago({ estado }: { estado: EstadoPago }) {
   return <Badge className={estilosEstadoPago[estado]}>{estado}</Badge>;
+}
+
+const estilosEstadoValidacion: Record<EstadoValidacion, string> = {
+  Verificado: "border-ocre/40 text-ocre",
+  Pendiente: "border-marfil-suave/40 text-marfil-suave",
+  Rechazado: "border-terracota/40 text-terracota",
+};
+
+export function BadgeEstadoValidacion({ estado }: { estado: EstadoValidacion }) {
+  return <Badge className={estilosEstadoValidacion[estado]}>{estado}</Badge>;
 }

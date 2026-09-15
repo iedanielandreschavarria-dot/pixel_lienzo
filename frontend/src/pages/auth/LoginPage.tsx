@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { AuthCard } from "./AuthCard";
 import { obtenerMensajeError } from "../../api/client";
+import { rutaInicialPorRol } from "../../lib/navegacion";
 
 interface FormValues {
   correo_electronico: string;
@@ -17,7 +18,9 @@ export function LoginPage() {
   const { notificar } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/";
+  // Si el usuario llegó aquí porque intentaba entrar a una ruta protegida, se
+  // respeta ese destino; si no, cada rol va a su propia vista principal.
+  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname;
 
   const {
     register,
@@ -32,7 +35,7 @@ export function LoginPage() {
         navigate("/mfa", { state: { correo: values.correo_electronico, from } });
         return;
       }
-      navigate(from, { replace: true });
+      navigate(from ?? rutaInicialPorRol(resultado.rol), { replace: true });
     } catch (error) {
       notificar(obtenerMensajeError(error, "Credenciales inválidas"), "error");
     }
