@@ -8,7 +8,7 @@ export function ProtectedRoute({ rolesPermitidos }: { rolesPermitidos?: NombreRo
   const location = useLocation();
 
   if (cargando) return <Spinner etiqueta="Verificando sesión…" />;
-
+  
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

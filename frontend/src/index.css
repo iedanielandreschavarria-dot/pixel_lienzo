@@ -24,6 +24,16 @@
     scroll-behavior: smooth;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    .animate-pulse {
+      animation: none !important;
+    }
+  }
+
   body {
     font-family: var(--font-sans);
     background-color: var(--color-carbon);
@@ -84,5 +94,19 @@
   }
   .galeria-masonry > * {
     break-inside: avoid;
+  }
+}
+
+/* Giro del carrusel cilíndrico. Una vuelta larga y lineal; el rotor
+   se pausa desde el componente al pasar el cursor, arrastrar o enfocar. */
+@keyframes cylinder-ry {
+  to {
+    transform: rotateY(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cylinder-rotor {
+    animation: none !important;
   }
 }
