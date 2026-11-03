@@ -1,13 +1,22 @@
 import { Link } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { urlPreviewObra } from "../api/obras";
 import type { Obra } from "../types";
 import { formatearMoneda } from "../lib/formato";
 
+const EnlaceObra = motion.create(Link);
+const MUELLE = { type: "spring" as const, stiffness: 300, damping: 25 };
+
 export function ObraCard({ obra }: { obra: Obra }) {
+  const reducirMovimiento = useReducedMotion() === true;
+
   return (
-    <Link
+    <EnlaceObra
       to={`/obras/${obra.id_obra}`}
-      className="group relative mb-6 block overflow-hidden bg-antracita"
+      whileHover={reducirMovimiento ? undefined : { y: -2 }}
+      whileTap={reducirMovimiento ? undefined : { scale: 0.97 }}
+      transition={reducirMovimiento ? { duration: 0 } : MUELLE}
+      className="group relative mb-6 block overflow-hidden bg-antracita focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ocre"
     >
       <img
         src={urlPreviewObra(obra.id_obra)}
@@ -38,6 +47,6 @@ export function ObraCard({ obra }: { obra: Obra }) {
       </div>
 
       <div className="pointer-events-none absolute inset-0 border border-transparent transition-colors duration-500 group-hover:border-ocre/25" />
-    </Link>
+    </EnlaceObra>
   );
 }

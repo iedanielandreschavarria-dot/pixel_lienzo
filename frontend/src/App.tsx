@@ -19,6 +19,7 @@ import { ArtistaPanelPage } from "./pages/artista/ArtistaPanelPage";
 import { ArtistaPerfilPage } from "./pages/artista/ArtistaPerfilPage";
 import { ObraFormPage } from "./pages/artista/ObraFormPage";
 import { CuraduriaPage } from "./pages/curaduria/CuraduriaPage";
+import { EstudioMotionPage } from "./pages/EstudioMotionPage";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             impresos junto a la pieza apuntan a `/obras/{uid}`. */}
         <Route path="obras/:idObra" element={<ObraDetallePage />} />
         <Route path="verificar/:sello" element={<VerificarCertificadoPage />} />
+        <Route path="estudio" element={<EstudioMotionPage />} />
 
         <Route path="login" element={<LoginPage />} />
         <Route path="mfa" element={<MfaPage />} />

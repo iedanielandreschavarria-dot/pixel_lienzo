@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { ClipboardCheck, LogOut, Menu, Palette, ShoppingBag, User, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -37,8 +37,24 @@ function enlacesPorRol(rol: NombreRol | undefined): Enlace[] {
 export function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const barraRef = useRef<HTMLDivElement>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [conFondo, setConFondo] = useState(false);
+
+  useEffect(() => {
+    const barra = barraRef.current;
+    if (!barra) return;
+    const publicarAlto = () => {
+      document.documentElement.style.setProperty("--alto-header", `${barra.offsetHeight}px`);
+    };
+    publicarAlto();
+    const observador = new ResizeObserver(publicarAlto);
+    observador.observe(barra);
+    return () => {
+      observador.disconnect();
+      document.documentElement.style.removeProperty("--alto-header");
+    };
+  }, []);
 
   useEffect(() => {
     const alScrollear = () => setConFondo(window.scrollY > 8);
@@ -61,7 +77,7 @@ export function Header() {
         conFondo ? "border-antracita-suave/60 bg-carbon/90 backdrop-blur-md" : "border-transparent bg-transparent"
       }`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 sm:px-10">
+      <div ref={barraRef} className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 sm:px-10">
         <Link to="/" className="flex items-baseline gap-2">
           <span className="font-[var(--font-display)] text-2xl font-semibold text-marfil">Pixel</span>
           <span className="font-[var(--font-display)] text-2xl italic text-ocre">&amp; Lienzo</span>
