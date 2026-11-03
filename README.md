@@ -160,3 +160,4 @@ Utilizamos **Git Flow Simplificado** alineado con nuestro tablero en **Taiga**:
 3. Realizar cambios, hacer commit referenciando la tarea de Taiga (ej. `git commit -m "feat(mod1): validacion OTP TG-12"`) y subir con `git push`.
 4. Abrir **Pull Request** hacia `develop` para integrar y probar en conjunto (estado **Ready for Test** en Taiga).
 5. Al finalizar el Sprint y validar todas las pruebas, fusionar `develop` → `main` (estado **Done** en Taiga).
+
