@@ -12,6 +12,7 @@ class ObraCreate(BaseModel):
     precio_venta: Decimal
     fotografia_hd_url: str
     id_categoria: int
+    es_patrimonio_historico: bool = False
 
 
 class ObraUpdate(BaseModel):
@@ -23,6 +24,7 @@ class ObraUpdate(BaseModel):
     precio_venta: Decimal | None = None
     fotografia_hd_url: str | None = None
     id_categoria: int | None = None
+    es_patrimonio_historico: bool | None = None
 
 
 class ObraEstadoUpdate(BaseModel):
