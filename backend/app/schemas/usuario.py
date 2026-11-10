@@ -23,3 +23,12 @@ class UsuarioRolUpdate(BaseModel):
 
 class UsuarioEstadoUpdate(BaseModel):
     estado_cuenta: str  # "Activo" | "Inhabilitado"
+
+
+class UsuarioInternoCreate(UsuarioBase):
+    """RF 1.1.5 — Creación interna de cuentas (Curador / Administrador) por un Administrador."""
+
+    contrasenia: str
+    id_rol: int
+    mfa_activado: bool = True
+
