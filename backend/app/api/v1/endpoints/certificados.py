@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.api.deps import ROL_CURADOR, get_current_user, require_roles
+from app.api.deps import ROL_ADMINISTRADOR, ROL_COMPRADOR, ROL_CURADOR, get_current_user, require_roles
 from app.core.database import get_db
 from app.models.certificado_autenticidad import CertificadoAutenticidad
+from app.models.envio_logistica import EnvioLogistica
 from app.models.obra_arte import ObraArte
+from app.models.transaccion import Transaccion
 from app.models.usuario import Usuario
 from app.schemas.certificado import (
     CertificadoCreate,
@@ -128,9 +130,48 @@ def verificar_certificado(sello: str, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/{id_obra}/descargar", response_model=CertificadoOut)
+def descargar_certificado_comprador(
+    id_obra: int,
+    usuario: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """RF 5.2.2 — Descarga definitiva del Certificado de Autenticidad para el
+    comprador, habilitada únicamente después de confirmar la recepción física
+    de la obra y el cierre del proceso logístico (`estado_envio = 'Entregado'`)."""
+    certificado = db.query(CertificadoAutenticidad).filter(CertificadoAutenticidad.id_obra == id_obra).first()
+    if certificado is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificado no encontrado")
+
+    rol_usuario = usuario.rol.nombre_rol
+    if rol_usuario == ROL_COMPRADOR:
+        envio_entregado = (
+            db.query(EnvioLogistica)
+            .join(Transaccion, EnvioLogistica.id_transaccion == Transaccion.id_transaccion)
+            .filter(
+                Transaccion.id_obra == id_obra,
+                Transaccion.id_comprador == usuario.id_usuario,
+                Transaccion.estado_pago.in_(("Confirmado", "Dispersado")),
+                EnvioLogistica.estado_envio == "Entregado",
+            )
+            .first()
+        )
+        if envio_entregado is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="El certificado definitivo solo puede descargarse tras confirmar la recepción física de la obra ('Entregado') (RF 5.2.2)",
+            )
+    elif rol_usuario not in (ROL_CURADOR, ROL_ADMINISTRADOR):
+        obra = db.get(ObraArte, id_obra)
+        if obra is None or obra.id_artista != usuario.id_usuario:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permiso para descargar este certificado")
+
+    return certificado
+
+
 @router.get("/{id_obra}", response_model=CertificadoOut)
 def obtener_certificado(id_obra: int, db: Session = Depends(get_db)):
-    """Descarga/consulta pública del certificado de autenticidad de una obra."""
+    """Consulta pública del certificado de autenticidad de una obra."""
     certificado = db.query(CertificadoAutenticidad).filter(CertificadoAutenticidad.id_obra == id_obra).first()
     if certificado is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificado no encontrado")
