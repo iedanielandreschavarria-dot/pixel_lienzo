@@ -20,6 +20,14 @@ class EnvioEstadoUpdate(BaseModel):
     firma_digital_comprador: str | None = None
 
 
+class EnvioConfirmarRecepcion(BaseModel):
+    """RF 4.4.1 / RF 4.4.2 — Confirmación de recepción por parte del Comprador."""
+
+    foto_recepcion_url: str | None = None
+    firma_digital_comprador: str | None = None
+
+
+
 class EnvioOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -26,6 +26,7 @@ import hashlib
 import hmac
 import secrets
 import urllib.parse
+from datetime import datetime, timedelta, timezone
 
 from app.core.config import settings
 
@@ -55,9 +56,24 @@ def id_transaccion_desde_referencia(referencia: str) -> int | None:
     return None
 
 
-def _firma_integridad(referencia: str, monto_en_centavos: int, moneda: str) -> str:
-    cadena = f"{referencia}{monto_en_centavos}{moneda}{settings.WOMPI_INTEGRITY_SECRET}"
+def _firma_integridad(
+    referencia: str,
+    monto_en_centavos: int,
+    moneda: str,
+    expiration_time: str | None = None,
+) -> str:
+    if expiration_time:
+        cadena = f"{referencia}{monto_en_centavos}{moneda}{expiration_time}{settings.WOMPI_INTEGRITY_SECRET}"
+    else:
+        cadena = f"{referencia}{monto_en_centavos}{moneda}{settings.WOMPI_INTEGRITY_SECRET}"
     return hashlib.sha256(cadena.encode("utf-8")).hexdigest()
+
+
+def generar_expiration_time(minutos: int | None = None) -> str:
+    """Genera timestamp ISO-8601 UTC de expiración para el Web Checkout de Wompi."""
+    ttl = minutos if minutos is not None else settings.CHECKOUT_RESERVATION_EXPIRE_MINUTES
+    expira = datetime.now(timezone.utc) + timedelta(minutes=ttl)
+    return expira.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def construir_url_checkout(
@@ -66,16 +82,20 @@ def construir_url_checkout(
     redirect_url: str,
     correo_comprador: str,
     moneda: str = "COP",
+    expiration_time: str | None = None,
 ) -> str:
-    """Construye la URL de Web Checkout de Wompi con la firma de integridad.
-    El frontend solo necesita redirigir el navegador del comprador a esta URL."""
-    firma = _firma_integridad(referencia, monto_en_centavos, moneda)
+    """Construye la URL de Web Checkout de Wompi con la firma de integridad
+    y tiempo de expiración (`expiration-time`) para evitar reservas eternas si
+    el comprador abandona la pestaña de pago."""
+    exp_str = expiration_time or generar_expiration_time()
+    firma = _firma_integridad(referencia, monto_en_centavos, moneda, exp_str)
     params = {
         "public-key": settings.WOMPI_PUBLIC_KEY,
         "currency": moneda,
         "amount-in-cents": str(monto_en_centavos),
         "reference": referencia,
         "signature:integrity": firma,
+        "expiration-time": exp_str,
         "redirect-url": redirect_url,
         "customer-data:email": correo_comprador,
     }
