@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.api.deps import ROL_ARTISTA, ROL_CURADOR, get_current_user, require_roles
+from app.api.deps import ROL_ADMINISTRADOR, ROL_ARTISTA, ROL_CURADOR, get_current_user, require_roles
 from app.core.database import get_db
 from app.models.obra_arte import ObraArte
 from app.models.perfil_artista import PerfilArtista
@@ -141,22 +141,45 @@ def actualizar_obra(
     usuario: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """El Artista solo puede editar sus propias obras en borrador u observadas."""
+    """Actualización de ficha técnica:
+    - Artista: solo sus propias obras mientras estén en estado 'Pendiente'.
+    - Curador (RF 2.2.4): edición de metadatos técnicos antes de publicar.
+    - Administrador (RF 2.4.1): marcación de piezas de 'Patrimonio Histórico'.
+    """
     obra = db.get(ObraArte, id_obra)
     if obra is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Obra no encontrada")
-    if obra.id_artista != usuario.id_usuario:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No es propietario de esta obra")
-    if obra.estado_obra not in ("Pendiente",):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Solo se puede editar una obra en estado 'Pendiente'",
-        )
 
-    for campo, valor in payload.model_dump(exclude_unset=True).items():
+    rol_usuario = usuario.rol.nombre_rol
+    es_curador_o_admin = rol_usuario in (ROL_CURADOR, ROL_ADMINISTRADOR)
+
+    if not es_curador_o_admin:
+        if obra.id_artista != usuario.id_usuario:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No es propietario de esta obra")
+        if obra.estado_obra not in ("Pendiente",):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Solo se puede editar una obra en estado 'Pendiente'",
+            )
+
+    cambios = payload.model_dump(exclude_unset=True)
+    # Solo el Administrador puede cambiar la bandera de Patrimonio Histórico (RF 2.4.1)
+    if "es_patrimonio_historico" in cambios and rol_usuario != ROL_ADMINISTRADOR:
+        cambios.pop("es_patrimonio_historico")
+
+    for campo, valor in cambios.items():
         setattr(obra, campo, valor)
     db.commit()
     db.refresh(obra)
+
+    if es_curador_o_admin and cambios:
+        log_action(
+            db,
+            id_usuario=usuario.id_usuario,
+            accion=ACCION_VALIDACION_OBRA,
+            detalles=f"Obra {id_obra}: metadatos editados por {rol_usuario} ({', '.join(cambios.keys())})",
+            tabla="obra_arte",
+        )
     return obra
 
 
