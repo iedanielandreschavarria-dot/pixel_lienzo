@@ -4,11 +4,22 @@ Módulo 5: Trust Engine — Historial de trazabilidad / Provenance.
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.api.deps import ROL_ADMINISTRADOR, require_roles
 from app.core.database import get_db
 from app.models.historial_trazabilidad import HistorialTrazabilidad
 from app.schemas.trazabilidad import TrazabilidadOut
 
 router = APIRouter()
+
+
+@router.get(
+    "",
+    response_model=list[TrazabilidadOut],
+    dependencies=[Depends(require_roles(ROL_ADMINISTRADOR))],
+)
+def listar_toda_trazabilidad(db: Session = Depends(get_db)):
+    """RF 5.4.2 — Consulta global del historial de procedencia para auditorías e investigaciones legales."""
+    return db.query(HistorialTrazabilidad).order_by(HistorialTrazabilidad.fecha_cambio.desc()).all()
 
 
 @router.get("/{id_obra}", response_model=list[TrazabilidadOut])
