@@ -7,15 +7,17 @@ El PATCH manual de estado se conserva como respaldo administrativo (p. ej.
 para dispersión de fondos o para corregir manualmente un caso excepcional).
 """
 import logging
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import ROL_ADMINISTRADOR, ROL_COMPRADOR, get_current_user, require_roles
+from app.api.deps import ROL_ADMINISTRADOR, ROL_ARTISTA, ROL_COMPRADOR, get_current_user, require_roles
 from app.core.config import settings
 from app.core.database import get_db
 from app.db.seed import PORCENTAJE_COMISION_GALERIA_DEFAULT
 from app.models.configuracion_sistema import ConfiguracionSistema
+from app.models.envio_logistica import EnvioLogistica
 from app.models.historial_trazabilidad import HistorialTrazabilidad
 from app.models.obra_arte import ObraArte
 from app.models.transaccion import Transaccion
@@ -106,6 +108,41 @@ def _exigir_pasarela_configurada() -> None:
         )
 
 
+def _liberar_reservas_vencidas(db: Session) -> int:
+    """Libera automáticamente las obras cuyas transacciones en estado
+    'Procesando' superaron `CHECKOUT_RESERVATION_EXPIRE_MINUTES` sin pago
+    confirmado (checkout abandonado)."""
+    ttl = timedelta(minutes=settings.CHECKOUT_RESERVATION_EXPIRE_MINUTES)
+    ahora_naive = datetime.now()
+    ahora_utc = datetime.now(timezone.utc)
+
+    pendientes = db.query(Transaccion).filter(Transaccion.estado_pago == "Procesando").all()
+    liberadas = 0
+    for tx in pendientes:
+        if tx.fecha_pago is None:
+            continue
+        ahora_ref = ahora_utc if tx.fecha_pago.tzinfo is not None else ahora_naive
+        if (ahora_ref - tx.fecha_pago) > ttl:
+            tx.estado_pago = "Rechazado"
+            obra = db.get(ObraArte, tx.id_obra)
+            if obra and obra.estado_obra == "Reservado":
+                obra.estado_obra = "Publicado"
+            liberadas += 1
+    if liberadas > 0:
+        db.commit()
+    return liberadas
+
+
+@router.post(
+    "/liberar-vencidas",
+    dependencies=[Depends(require_roles(ROL_ADMINISTRADOR))],
+)
+def liberar_reservas_vencidas_endpoint(db: Session = Depends(get_db)):
+    """Endpoint administrativo manual para liberar reservas de checkout vencidas."""
+    liberadas = _liberar_reservas_vencidas(db)
+    return {"liberadas": liberadas}
+
+
 @router.post(
     "",
     response_model=TransaccionCreadaOut,
@@ -130,10 +167,16 @@ def crear_transaccion(
     # Se valida antes de tocar la obra: no tiene sentido reservar una pieza
     # si después no vamos a poder cobrarla.
     _exigir_pasarela_configurada()
+    _liberar_reservas_vencidas(db)
 
     obra = db.query(ObraArte).filter(ObraArte.id_obra == payload.id_obra).with_for_update().first()
     if obra is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Obra no encontrada")
+    if obra.es_patrimonio_historico:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Las obras de Patrimonio Histórico no están disponibles para la venta (RF 2.4.1)",
+        )
     if obra.estado_obra != "Publicado":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -155,14 +198,6 @@ def crear_transaccion(
     obra.estado_obra = "Reservado"
     db.add(transaccion)
     db.flush()
-
-    db.add(
-        HistorialTrazabilidad(
-            id_obra=obra.id_obra,
-            id_propietario_nuevo=usuario.id_usuario,
-            id_transaccion=transaccion.id_transaccion,
-        )
-    )
 
     referencia = generar_referencia(transaccion.id_transaccion)
     transaccion.referencia_pasarela = referencia
@@ -216,8 +251,29 @@ def listar_mis_transacciones(
     usuario: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Historial de compras del comprador autenticado."""
-    return db.query(Transaccion).filter(Transaccion.id_comprador == usuario.id_usuario).all()
+    """Listado de transacciones según el rol del usuario autenticado:
+    - Administrador (RF 3.2.3): todas las transacciones de la galería.
+    - Artista (RF 3.4.3): ventas asociadas a sus propias obras.
+    - Comprador: historial de sus compras personales.
+    """
+    _liberar_reservas_vencidas(db)
+    rol_usuario = usuario.rol.nombre_rol
+    if rol_usuario == ROL_ADMINISTRADOR:
+        return db.query(Transaccion).order_by(Transaccion.id_transaccion.desc()).all()
+    if rol_usuario == ROL_ARTISTA:
+        return (
+            db.query(Transaccion)
+            .join(ObraArte, Transaccion.id_obra == ObraArte.id_obra)
+            .filter(ObraArte.id_artista == usuario.id_usuario)
+            .order_by(Transaccion.id_transaccion.desc())
+            .all()
+        )
+    return (
+        db.query(Transaccion)
+        .filter(Transaccion.id_comprador == usuario.id_usuario)
+        .order_by(Transaccion.id_transaccion.desc())
+        .all()
+    )
 
 
 @router.get("/{id_transaccion}", response_model=TransaccionOut)
@@ -229,16 +285,39 @@ def obtener_transaccion(
     transaccion = db.get(Transaccion, id_transaccion)
     if transaccion is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transacción no encontrada")
+
+    rol_usuario = usuario.rol.nombre_rol
+    obra = db.get(ObraArte, transaccion.id_obra)
+    es_comprador_dueno = transaccion.id_comprador == usuario.id_usuario
+    es_artista_dueno = obra is not None and obra.id_artista == usuario.id_usuario
+    if rol_usuario != ROL_ADMINISTRADOR and not es_comprador_dueno and not es_artista_dueno:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene acceso a esta transacción")
+
     return transaccion
 
 
 def _confirmar_pago(db: Session, transaccion: Transaccion) -> None:
-    """Efectos de un pago aprobado: vender la obra y notificar al artista.
+    """Efectos de un pago aprobado: vender la obra, registrar el cambio de
+    titularidad en HistorialTrazabilidad (RF 5.4.1) y notificar al artista.
     Compartido entre el webhook de Wompi y el PATCH manual de respaldo."""
     transaccion.estado_pago = "Confirmado"
     obra = db.get(ObraArte, transaccion.id_obra)
     if obra:
         obra.estado_obra = "Vendido"
+        existe_trazabilidad = (
+            db.query(HistorialTrazabilidad)
+            .filter(HistorialTrazabilidad.id_transaccion == transaccion.id_transaccion)
+            .first()
+        )
+        if not existe_trazabilidad:
+            db.add(
+                HistorialTrazabilidad(
+                    id_obra=obra.id_obra,
+                    id_propietario_anterior=obra.id_artista,
+                    id_propietario_nuevo=transaccion.id_comprador,
+                    id_transaccion=transaccion.id_transaccion,
+                )
+            )
     db.commit()
     db.refresh(transaccion)
 
@@ -329,6 +408,18 @@ def actualizar_estado_transaccion(
     transaccion = db.get(Transaccion, id_transaccion)
     if transaccion is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transacción no encontrada")
+
+    if payload.estado_pago == "Dispersado":
+        envio = (
+            db.query(EnvioLogistica)
+            .filter(EnvioLogistica.id_transaccion == id_transaccion)
+            .first()
+        )
+        if envio is None or envio.estado_envio != "Entregado":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Solo se pueden dispersar los fondos cuando la obra tenga recepción confirmada ('Entregado') (RF 3.5.1)",
+            )
 
     if payload.estado_pago == "Reembolsado":
         # Misma lógica que dispara una reclamación resuelta como "Devolución
