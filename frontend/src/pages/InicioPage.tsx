@@ -294,14 +294,20 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
     [navigate, obras]
   );
 
-  // Medidas exactas para el giro horizontal (-90deg) de la columna (.galeria__arco)
+  // Medidas exactas para el giro horizontal (-90deg hacia la derecha en Obras, +90deg hacia la izquierda en Artistas)
+  // En vertical (0deg) --arriba coloca el hueco y el domo por encima del viewport (<= -0.86 * W), haciendo que la columna y los rieles coincidan píxel a píxel con .arco sin necesidad de translateY
   const calcularMedidasGaleria = useCallback((scrollReferencia: number) => {
     const raiz = document.documentElement;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const W = Math.min(0.96 * vw, 1.12 * vh, 1040);
     const s = Math.min(1.4, (0.9 * vh) / W);
-    const arriba = 0.03 * vh - scrollReferencia;
+    const scrollMinimoAlineado = Math.max(0.86 * W + 0.03 * vh, 0.96 * vh);
+    const scrollEfectivo =
+      scrollReferencia < 0.5 * vh
+        ? scrollReferencia
+        : Math.min(Math.max(scrollReferencia, scrollMinimoAlineado), Math.max(vh, scrollMinimoAlineado));
+    const arriba = 0.03 * vh - scrollEfectivo;
     raiz.style.setProperty("--s", s.toFixed(3));
     raiz.style.setProperty("--arriba", `${arriba.toFixed(1)}px`);
   }, []);
@@ -312,13 +318,12 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
     const destinoEl = pista.children[
       Math.max(0, Math.min(pista.children.length - 1, idx))
     ] as HTMLElement | undefined;
-    const baseEl = pista.children[0] as HTMLElement | undefined;
-    if (!destinoEl || !baseEl) return;
-    const left = destinoEl.offsetLeft - baseEl.offsetLeft;
+    if (!destinoEl) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    pista.scrollTo({
-      left,
+    destinoEl.scrollIntoView({
       behavior: suave && !reduceMotion ? "smooth" : "auto",
+      block: "nearest",
+      inline: "start",
     });
   }, []);
 
@@ -357,7 +362,7 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
         enTransicionRef.current = false;
         cerrarGaleriaRef.current?.focus();
       },
-      reduceMotion ? 0 : 1850
+      reduceMotion ? 0 : 960
     );
 
     return () => {
@@ -398,7 +403,7 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
         enTransicionRef.current = false;
         origenFocoRef.current?.focus();
       },
-      reduceMotion ? 0 : 1750
+      reduceMotion ? 0 : 980
     );
   }, [galeriaActiva]);
 
@@ -410,39 +415,71 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
     return baseObras + 1;
   }, [artistasColeccion.length, modoGaleria, obrasDestacadas.length]);
 
-  // Teclado dentro de la galería horizontal
+  // Teclado dentro de la galería horizontal (respeta dirección hacia la derecha en Obras y hacia la izquierda en Artistas)
   useEffect(() => {
     if (!galeriaActiva) return;
+    const haciaIzquierda = modoGaleria === "artistas";
     const alTecla = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         cerrarGaleria();
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        const sig = Math.min(totalTarjetasPista - 1, indiceGaleria + 1);
-        setIndiceGaleria(sig);
-        desplazarPistaAIndice(sig, true);
+        const destino = haciaIzquierda
+          ? Math.max(0, indiceGaleria - 1)
+          : Math.min(totalTarjetasPista - 1, indiceGaleria + 1);
+        setIndiceGaleria(destino);
+        desplazarPistaAIndice(destino, true);
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
-        const ant = Math.max(0, indiceGaleria - 1);
-        setIndiceGaleria(ant);
-        desplazarPistaAIndice(ant, true);
+        const destino = haciaIzquierda
+          ? Math.min(totalTarjetasPista - 1, indiceGaleria + 1)
+          : Math.max(0, indiceGaleria - 1);
+        setIndiceGaleria(destino);
+        desplazarPistaAIndice(destino, true);
+      } else if (
+        e.key === "ArrowDown" ||
+        e.key === "ArrowUp" ||
+        e.key === "PageDown" ||
+        e.key === "PageUp" ||
+        e.key === " "
+      ) {
+        e.preventDefault();
       }
     };
+    const alRueda = (e: WheelEvent) => {
+      e.preventDefault();
+      const pista = pistaRef.current;
+      if (!pista || !galeriaAbierta) return;
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      pista.scrollLeft += haciaIzquierda ? -delta : delta;
+    };
     window.addEventListener("keydown", alTecla);
-    return () => window.removeEventListener("keydown", alTecla);
-  }, [cerrarGaleria, desplazarPistaAIndice, galeriaActiva, indiceGaleria, totalTarjetasPista]);
+    window.addEventListener("wheel", alRueda, { passive: false });
+    return () => {
+      window.removeEventListener("keydown", alTecla);
+      window.removeEventListener("wheel", alRueda);
+    };
+  }, [cerrarGaleria, desplazarPistaAIndice, galeriaAbierta, galeriaActiva, indiceGaleria, modoGaleria, totalTarjetasPista]);
 
   const alScrollPista = () => {
     const pista = pistaRef.current;
     if (!pista || !pista.children.length) return;
-    const base = (pista.children[0] as HTMLElement).offsetLeft;
-    const actualScroll = pista.scrollLeft;
+    const rectPista = pista.getBoundingClientRect();
+    const haciaIzquierda = modoGaleria === "artistas";
+    const estiloPista = window.getComputedStyle(pista);
+    const padRef = parseFloat(
+      haciaIzquierda ? estiloPista.paddingRight : estiloPista.paddingLeft
+    ) || 0;
+    const xAncla = haciaIzquierda ? rectPista.right - padRef : rectPista.left + padRef;
+
     let mejorIdx = 0;
     let mejorDist = Infinity;
     for (let i = 0; i < pista.children.length; i++) {
       const el = pista.children[i] as HTMLElement;
-      const dist = Math.abs(el.offsetLeft - base - actualScroll);
+      const rectEl = el.getBoundingClientRect();
+      const xBorde = haciaIzquierda ? rectEl.right : rectEl.left;
+      const dist = Math.abs(xBorde - xAncla);
       if (dist < mejorDist) {
         mejorDist = dist;
         mejorIdx = i;
@@ -616,7 +653,7 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
               onClick={(e) => abrirGaleria("artistas", 0, e.currentTarget)}
               className="disco-enlace"
             >
-              Conocer a los artistas
+              ← Conocer a los artistas
             </button>
           </div>
         )}
@@ -639,11 +676,12 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
         )}
       </Disco>
 
-      {/* Galería horizontal: la columna roja (.galeria__arco) gira -90° y despliega las tarjetas en horizontal */}
+      {/* Galería horizontal: la columna roja (.galeria__arco) gira -90° hacia la derecha en Obras y +90° hacia la izquierda en Artistas */}
       <section
         ref={galeriaRef}
         className={clsx(
           "galeria",
+          modoGaleria === "artistas" && "galeria--izquierda",
           galeriaActiva && "activa",
           galeriaAbierta && "abierta"
         )}
@@ -671,7 +709,7 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
             if (!pista) return;
             if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
               e.preventDefault();
-              pista.scrollLeft += e.deltaY;
+              pista.scrollLeft += modoGaleria === "artistas" ? -e.deltaY : e.deltaY;
             }
           }}
           onMouseDown={(e) => {
@@ -829,7 +867,7 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
                   Ver todos los artistas
                 </span>
                 <span className="mt-[var(--espacio-8)] font-[var(--fuente-acento)] text-[length:var(--text-cuerpo)] italic text-[color:var(--tinta-suave)]">
-                  Conocer a quienes crean cada obra →
+                  ← Conocer a quienes crean cada obra
                 </span>
               </button>
             </>
@@ -839,11 +877,14 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
         <div className="galeria__controles">
           <button
             type="button"
-            aria-label="Elemento anterior"
+            aria-label={modoGaleria === "artistas" ? "Artista siguiente" : "Obra anterior"}
             onClick={() => {
-              const ant = Math.max(0, indiceGaleria - 1);
-              setIndiceGaleria(ant);
-              desplazarPistaAIndice(ant, true);
+              const destino =
+                modoGaleria === "artistas"
+                  ? Math.min(totalTarjetasPista - 1, indiceGaleria + 1)
+                  : Math.max(0, indiceGaleria - 1);
+              setIndiceGaleria(destino);
+              desplazarPistaAIndice(destino, true);
             }}
           >
             ←
@@ -853,11 +894,14 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
           </span>
           <button
             type="button"
-            aria-label="Elemento siguiente"
+            aria-label={modoGaleria === "artistas" ? "Artista anterior" : "Obra siguiente"}
             onClick={() => {
-              const sig = Math.min(totalTarjetasPista - 1, indiceGaleria + 1);
-              setIndiceGaleria(sig);
-              desplazarPistaAIndice(sig, true);
+              const destino =
+                modoGaleria === "artistas"
+                  ? Math.max(0, indiceGaleria - 1)
+                  : Math.min(totalTarjetasPista - 1, indiceGaleria + 1);
+              setIndiceGaleria(destino);
+              desplazarPistaAIndice(destino, true);
             }}
           >
             →

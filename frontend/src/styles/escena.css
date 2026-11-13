@@ -9,13 +9,8 @@
   --arriba: 0px;
 }
 
-html.escena-inicio:not(.sin-entrar):not(.galeria-abierta) {
+html.escena-inicio:not(.sin-entrar) {
   scroll-snap-type: y mandatory;
-}
-
-html.galeria-abierta,
-html.galeria-abierta body {
-  overflow: hidden;
 }
 
 /* ---------- Ambiente: Luz roja desde abajo (base.css) ---------- */
@@ -56,7 +51,7 @@ html.galeria-abierta body {
 .vineta {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 46;
   pointer-events: none;
   background: radial-gradient(
     ellipse at 50% 48%,
@@ -68,7 +63,7 @@ html.galeria-abierta body {
 .grano {
   position: fixed;
   inset: 0;
-  z-index: 21;
+  z-index: 47;
   pointer-events: none;
   opacity: 0.11;
   mix-blend-mode: screen;
@@ -477,7 +472,7 @@ html.galeria-abierta body {
 
 /* ---------- Galería horizontal (galeria.css) ---------- */
 .galeria {
-  --hx: calc(50vw - (50vh - var(--arriba) - var(--W) * 0.54) * var(--s));
+  --hx: calc(50% - (50vh - var(--arriba) - var(--W) * 0.54) * var(--s));
   --alto: calc(var(--D) * var(--s) * 0.84);
   --ancho: calc(var(--D) * var(--s) * 0.66);
   position: fixed;
@@ -487,15 +482,15 @@ html.galeria-abierta body {
   visibility: hidden;
   opacity: 0;
   transition:
-    opacity var(--duracion-hover) var(--curva-base),
-    visibility 0s linear var(--duracion-hover);
+    opacity 240ms var(--curva-base),
+    visibility 0s linear 240ms;
 }
 
 .galeria.activa {
   visibility: visible;
   opacity: 1;
   transition:
-    opacity var(--duracion-hover) var(--curva-base),
+    opacity 240ms var(--curva-base),
     visibility 0s;
 }
 
@@ -524,13 +519,19 @@ html.galeria-abierta body {
   );
   box-shadow: 0 0 150px rgba(150, 20, 14, 0.45);
   transform: rotate(0deg) scale(1);
-  transition: transform var(--duracion-momento-max) var(--curva-momento) 0.3s;
+  transition: transform 880ms cubic-bezier(0.22, 1, 0.36, 1) 80ms;
   will-change: transform;
 }
 
 .galeria.abierta .galeria__arco {
   transform: rotate(-90deg) scale(var(--s));
-  transition-delay: 0.4s;
+  transition-delay: 60ms;
+}
+
+/* Variante hacia la izquierda (Acto III — Artistas): el arco gira +90° en sentido horario */
+.galeria--izquierda.abierta .galeria__arco {
+  transform: rotate(90deg) scale(var(--s));
+  transition-delay: 60ms;
 }
 
 .galeria__titulo {
@@ -548,12 +549,25 @@ html.galeria-abierta body {
     0 0 70px rgba(200, 30, 20, 0.45);
 }
 
+.galeria--izquierda .galeria__titulo {
+  left: auto;
+  right: var(--hx);
+  transform: translate(50%, -50%);
+}
+
 @media (max-width: 1023px) {
-  .galeria__titulo {
+  .galeria__titulo,
+  .galeria--izquierda .galeria__titulo {
     left: var(--espacio-24);
+    right: auto;
     top: calc(env(safe-area-inset-top, 0px) + var(--espacio-24));
     transform: none;
     font-size: var(--text-h2-movil);
+  }
+
+  .galeria--izquierda .galeria__titulo {
+    left: auto;
+    right: var(--espacio-24);
   }
 }
 
@@ -573,6 +587,17 @@ html.galeria-abierta body {
   cursor: grab;
 }
 
+.galeria--izquierda .galeria__pista {
+  direction: rtl;
+  padding: 0 var(--pad) 0 var(--espacio-128);
+  scroll-padding-left: 0;
+  scroll-padding-right: var(--pad);
+}
+
+.galeria--izquierda .tarjeta-galeria {
+  direction: ltr;
+}
+
 .galeria__pista.arrastrando {
   cursor: grabbing;
   scroll-snap-type: none;
@@ -583,6 +608,11 @@ html.galeria-abierta body {
   .galeria__pista {
     --pad: var(--espacio-24);
     padding: 0 var(--espacio-48) 0 var(--pad);
+  }
+
+  .galeria--izquierda .galeria__pista {
+    --pad: var(--espacio-24);
+    padding: 0 var(--pad) 0 var(--espacio-48);
   }
 }
 
@@ -595,7 +625,17 @@ html.galeria-abierta body {
 .galeria__cerrar,
 .galeria__controles {
   opacity: 0;
-  transition: opacity var(--duracion-ruta) var(--curva-base);
+  transition:
+    opacity 180ms var(--curva-base),
+    transform 180ms var(--curva-base);
+}
+
+.galeria__pista {
+  transform: translateX(42px);
+}
+
+.galeria--izquierda .galeria__pista {
+  transform: translateX(-42px);
 }
 
 .galeria__pista,
@@ -608,7 +648,14 @@ html.galeria-abierta body {
 .galeria.abierta .galeria__cerrar,
 .galeria.abierta .galeria__controles {
   opacity: 1;
-  transition: opacity var(--duracion-momento-min) var(--curva-base) 1.4s;
+  transition:
+    opacity 480ms cubic-bezier(0.22, 1, 0.36, 1) 400ms,
+    transform 540ms cubic-bezier(0.22, 1, 0.36, 1) 400ms;
+}
+
+.galeria.abierta .galeria__pista,
+.galeria--izquierda.abierta .galeria__pista {
+  transform: translateX(0);
 }
 
 .galeria.abierta .galeria__pista,
@@ -660,6 +707,11 @@ html.galeria-abierta body {
   border: 1px solid var(--riel);
   border-radius: var(--radio-pildora);
   cursor: pointer;
+}
+
+.galeria--izquierda .galeria__cerrar {
+  right: auto;
+  left: var(--espacio-24);
 }
 
 .galeria__cerrar:hover {
