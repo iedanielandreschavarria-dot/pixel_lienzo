@@ -16,7 +16,8 @@ Archivos maestros y exportaciones PNG en alta resolución (`681×681 px`, fondo 
 
 ## Ubicación en el frontend
 
-- **Módulo de assets tipado (Vite)**: `frontend/src/assets/logos/` (`index.ts`)
+- **Carpeta principal `4x`**: `frontend/4x/` y `frontend/src/assets/4x/`
+- **Módulo de assets tipado (Vite)**: `frontend/src/assets/logos/index.ts` (importa desde `../4x/`)
 - **Componente reutilizable**: `frontend/src/components/ui/LogoMarca.tsx`
-- **Archivos públicos estáticos / Favicon**: `frontend/public/logos/`
+- **Archivos públicos estáticos / Favicon**: `frontend/public/4x/` y `frontend/public/logos/`
 

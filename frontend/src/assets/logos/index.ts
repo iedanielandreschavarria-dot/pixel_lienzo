@@ -1,11 +1,11 @@
-import isotipoVacio from "./isotipo-vacio.png";
-import isotipoFondo from "./isotipo-fondo.png";
-import isotipoTinta from "./isotipo-tinta.png";
-import isotipoTintaSuave from "./isotipo-tinta-suave.png";
-import isotipoProfundidad from "./isotipo-profundidad.png";
-import isotipoCarmesi from "./isotipo-carmesi.png";
-import isotipoIncandescente from "./isotipo-incandescente.png";
-import isotipoRiel from "./isotipo-riel.png";
+import isotipoVacio from "../4x/isotipo-vacio.png";
+import isotipoFondo from "../4x/isotipo-fondo.png";
+import isotipoTinta from "../4x/isotipo-tinta.png";
+import isotipoTintaSuave from "../4x/isotipo-tinta-suave.png";
+import isotipoProfundidad from "../4x/isotipo-profundidad.png";
+import isotipoCarmesi from "../4x/isotipo-carmesi.png";
+import isotipoIncandescente from "../4x/isotipo-incandescente.png";
+import isotipoRiel from "../4x/isotipo-riel.png";
 
 export type VarianteLogo =
   | "vacio"
