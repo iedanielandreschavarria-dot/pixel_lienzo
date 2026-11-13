@@ -137,8 +137,8 @@ export function CylinderCarousel({
       style={{
         perspective: "35em",
         touchAction: "pan-y",
-        maskImage: "linear-gradient(90deg, transparent, #000 12% 88%, transparent)",
-        WebkitMaskImage: "linear-gradient(90deg, transparent, #000 12% 88%, transparent)",
+        maskImage: "linear-gradient(90deg, transparent, var(--vacio) 12% 88%, transparent)",
+        WebkitMaskImage: "linear-gradient(90deg, transparent, var(--vacio) 12% 88%, transparent)",
       }}
       onPointerEnter={alEntrar}
       onPointerLeave={alSalir}
@@ -176,7 +176,7 @@ export function CylinderCarousel({
             } as CSSProperties;
             const clase = clsx("[grid-area:1/1] [backface-visibility:hidden]", cardClassName);
             const marco =
-              "block h-full w-full overflow-hidden border border-marfil/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ocre";
+              "block h-full w-full overflow-hidden border border-[color:var(--borde-reposo)]";
             const foto = (
               <img
                 src={imagen.src}

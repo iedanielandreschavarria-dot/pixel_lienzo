@@ -20,12 +20,14 @@ import { ArtistaPerfilPage } from "./pages/artista/ArtistaPerfilPage";
 import { ObraFormPage } from "./pages/artista/ObraFormPage";
 import { CuraduriaPage } from "./pages/curaduria/CuraduriaPage";
 import { EstudioMotionPage } from "./pages/EstudioMotionPage";
+import { KitPage } from "./pages/KitPage";
 
 function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<CatalogoPage />} />
+        {import.meta.env.DEV && <Route path="kit" element={<KitPage />} />}
         {/* Acepta la clave primaria o el UID de la obra: los QR físicos
             impresos junto a la pieza apuntan a `/obras/{uid}`. */}
         <Route path="obras/:idObra" element={<ObraDetallePage />} />

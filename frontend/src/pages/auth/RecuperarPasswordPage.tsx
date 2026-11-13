@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { solicitarRecuperacion } from "../../api/auth";
 import { useToast } from "../../context/ToastContext";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
+import { Banner } from "../../components/ui/Banner";
 import { AuthCard } from "./AuthCard";
 import { obtenerMensajeError } from "../../api/client";
 
@@ -11,19 +13,26 @@ interface FormValues {
   correo_electronico: string;
 }
 
+const CONFIRMACION_NEUTRA = "Si el correo está registrado, recibirás un enlace en unos minutos.";
+
 export function RecuperarPasswordPage() {
   const { notificar } = useToast();
+
+  useEffect(() => {
+    document.title = "Recuperar contraseña · Pixel & Lienzo";
+  }, []);
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting, isSubmitSuccessful },
-  } = useForm<FormValues>();
+  } = useForm<FormValues>({ mode: "onBlur" });
 
   const onSubmit = async (values: FormValues) => {
     try {
       await solicitarRecuperacion(values.correo_electronico);
-      notificar("Si el correo existe, se envió un enlace de recuperación.");
+      notificar(CONFIRMACION_NEUTRA, "exito");
       reset(values);
     } catch (error) {
       notificar(obtenerMensajeError(error), "error");
@@ -31,28 +40,45 @@ export function RecuperarPasswordPage() {
   };
 
   return (
-    <AuthCard titulo="Recuperar contraseña" subtitulo="Te enviaremos un enlace para restablecerla">
+    <AuthCard titulo="Recuperar" subtitulo="Te enviaremos un enlace para restablecer tu contraseña">
       {isSubmitSuccessful ? (
-        <p className="text-sm text-marfil-suave">
-          Revisa tu correo (o la consola del servidor en modo desarrollo) para continuar. Vuelve a{" "}
-          <Link to="/login" className="text-ocre underline">
-            iniciar sesión
-          </Link>
-          .
-        </p>
+        <div className="flex flex-col gap-[var(--espacio-24)]">
+          <Banner variante="exito">{CONFIRMACION_NEUTRA}</Banner>
+
+          <p className="text-center text-[length:var(--text-cuerpo)] text-[color:var(--tinta-suave)]">
+            <Link to="/login" className="enlace-acceso">
+              ← Volver a iniciar sesión
+            </Link>
+          </p>
+        </div>
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-[var(--espacio-24)]">
           <Input
-            label="Correo electrónico"
+            variante="subrayado"
+            label="Correo"
             type="email"
+            autoComplete="email"
             error={errors.correo_electronico?.message}
-            {...register("correo_electronico", { required: "Ingresa tu correo" })}
+            {...register("correo_electronico", {
+              required: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
+              pattern: {
+                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                message: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
+              },
+            })}
           />
-          <Button type="submit" cargando={isSubmitting} className="mt-2 w-full">
+          <Button type="submit" variante="primario" cargando={isSubmitting} className="w-full">
             Enviar enlace
           </Button>
+
+          <p className="text-center text-[length:var(--text-cuerpo)] text-[color:var(--tinta-suave)]">
+            <Link to="/login" className="enlace-acceso">
+              ← Volver a iniciar sesión
+            </Link>
+          </p>
         </form>
       )}
     </AuthCard>
   );
 }
+
