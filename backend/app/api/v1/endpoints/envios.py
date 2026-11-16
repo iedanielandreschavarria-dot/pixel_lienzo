@@ -6,13 +6,20 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import ROL_ADMINISTRADOR, ROL_COMPRADOR, ROL_CURADOR, get_current_user, require_roles
+from app.api.deps import (
+    ROL_ADMINISTRADOR,
+    ROL_ARTISTA,
+    ROL_COMPRADOR,
+    ROL_CURADOR,
+    get_current_user,
+    require_roles,
+)
 from app.core.database import get_db
 from app.models.envio_logistica import EnvioLogistica
 from app.models.obra_arte import ObraArte
 from app.models.transaccion import Transaccion
 from app.models.usuario import Usuario
-from app.schemas.envio import EnvioCreate, EnvioEstadoUpdate, EnvioOut
+from app.schemas.envio import EnvioConfirmarRecepcion, EnvioCreate, EnvioEstadoUpdate, EnvioOut
 from app.services.email_service import enviar_actualizacion_envio, enviar_confirmacion_envio
 
 router = APIRouter()
@@ -27,9 +34,11 @@ def _verificar_acceso(envio: EnvioLogistica, usuario: Usuario, db: Session) -> T
     """El Comprador solo puede ver/gestionar sus propios envíos; Administrador
     y Curador (logística) pueden acceder a cualquiera."""
     transaccion = db.get(Transaccion, envio.id_transaccion)
-    if usuario.rol.nombre_rol == ROL_COMPRADOR and (
-        transaccion is None or transaccion.id_comprador != usuario.id_usuario
-    ):
+    rol_usuario = usuario.rol.nombre_rol
+    if rol_usuario == ROL_COMPRADOR:
+        if transaccion is None or transaccion.id_comprador != usuario.id_usuario:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene acceso a este envío")
+    elif rol_usuario not in (ROL_ADMINISTRADOR, ROL_CURADOR):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene acceso a este envío")
     return transaccion
 
@@ -69,7 +78,11 @@ def crear_envio(payload: EnvioCreate, db: Session = Depends(get_db)):
     return envio
 
 
-@router.get("", response_model=list[EnvioOut])
+@router.get(
+    "",
+    response_model=list[EnvioOut],
+    dependencies=[Depends(require_roles(ROL_COMPRADOR, ROL_CURADOR, ROL_ADMINISTRADOR))],
+)
 def listar_envios(
     usuario: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -130,4 +143,45 @@ def actualizar_estado_envio(id_envio: int, payload: EnvioEstadoUpdate, db: Sessi
         obra = db.get(ObraArte, transaccion.id_obra)
         if comprador and obra:
             enviar_actualizacion_envio(comprador.correo_electronico, obra.titulo, envio.estado_envio)
+    return envio
+
+
+@router.post(
+    "/{id_envio}/confirmar-recepcion",
+    response_model=EnvioOut,
+    dependencies=[Depends(require_roles(ROL_COMPRADOR))],
+)
+def confirmar_recepcion_comprador(
+    id_envio: int,
+    payload: EnvioConfirmarRecepcion,
+    usuario: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """RF 4.4.1 / RF 4.4.2 — El Comprador confirma la recepción satisfactoria
+    de la obra física adjuntando fotografía de recepción y/o su firma digital,
+    habilitando la descarga del Certificado de Autenticidad (RF 5.2.2) y la
+    posterior dispersión de fondos al artista (RF 3.5.1)."""
+    envio = db.get(EnvioLogistica, id_envio)
+    if envio is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Envío no encontrado")
+
+    transaccion = _verificar_acceso(envio, usuario, db)
+    if not (payload.foto_recepcion_url or payload.firma_digital_comprador):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe adjuntar foto_recepcion_url o firma_digital_comprador para confirmar la recepción (RF 4.4.2)",
+        )
+
+    if payload.foto_recepcion_url:
+        envio.foto_recepcion_url = payload.foto_recepcion_url
+    if payload.firma_digital_comprador:
+        envio.firma_digital_comprador = payload.firma_digital_comprador
+    envio.estado_envio = "Entregado"
+    db.commit()
+    db.refresh(envio)
+
+    if transaccion:
+        obra = db.get(ObraArte, transaccion.id_obra)
+        if obra:
+            enviar_actualizacion_envio(usuario.correo_electronico, obra.titulo, envio.estado_envio)
     return envio

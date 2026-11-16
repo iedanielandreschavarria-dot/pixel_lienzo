@@ -1,17 +1,28 @@
 from decimal import Decimal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+ESTADOS_OBRA_LITERAL = Literal[
+    "Pendiente",
+    "Publicado",
+    "Reservado",
+    "Vendido",
+    "En Préstamo",
+    "Mantenimiento",
+]
 
 
 class ObraCreate(BaseModel):
-    titulo: str
-    tecnica: str
-    dimensiones: str
-    peso: Decimal
+    titulo: str = Field(min_length=1)
+    tecnica: str = Field(min_length=1)
+    dimensiones: str = Field(min_length=1)
+    peso: Decimal = Field(gt=0)
     anio_creacion: int | None = None
-    precio_venta: Decimal
-    fotografia_hd_url: str
+    precio_venta: Decimal = Field(gt=0)
+    fotografia_hd_url: str = Field(min_length=1)
     id_categoria: int
+    es_patrimonio_historico: bool = False
 
 
 class ObraUpdate(BaseModel):
@@ -23,10 +34,11 @@ class ObraUpdate(BaseModel):
     precio_venta: Decimal | None = None
     fotografia_hd_url: str | None = None
     id_categoria: int | None = None
+    es_patrimonio_historico: bool | None = None
 
 
 class ObraEstadoUpdate(BaseModel):
-    estado_obra: str  # Pendiente | Publicado | Reservado | Vendido | En Préstamo | Mantenimiento
+    estado_obra: ESTADOS_OBRA_LITERAL
     motivo: str | None = None
 
 

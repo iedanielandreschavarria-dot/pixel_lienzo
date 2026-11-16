@@ -9,10 +9,22 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import ROL_ADMINISTRADOR, get_current_user, require_roles
 from app.core.database import get_db
+from app.core.security import hash_password
+from app.models.rol import Rol
 from app.models.usuario import Usuario
 from app.schemas.common import Msg
-from app.schemas.usuario import UsuarioEstadoUpdate, UsuarioOut, UsuarioRolUpdate
-from app.services.audit_service import ACCION_CAMBIO_ROL, ACCION_INHABILITACION_CUENTA, log_action
+from app.schemas.usuario import (
+    UsuarioEstadoUpdate,
+    UsuarioInternoCreate,
+    UsuarioOut,
+    UsuarioRolUpdate,
+)
+from app.services.audit_service import (
+    ACCION_CAMBIO_ROL,
+    ACCION_CREACION_USUARIO_INTERNO,
+    ACCION_INHABILITACION_CUENTA,
+    log_action,
+)
 
 router = APIRouter()
 
@@ -21,6 +33,47 @@ router = APIRouter()
 def listar_usuarios(db: Session = Depends(get_db)):
     """RF 1.3.1 — Directorio maestro de usuarios (solo Administrador)."""
     return db.query(Usuario).all()
+
+
+@router.post(
+    "",
+    response_model=UsuarioOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles(ROL_ADMINISTRADOR))],
+)
+def crear_usuario_interno(
+    payload: UsuarioInternoCreate,
+    admin: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """RF 1.1.5 — Creación interna de credenciales para roles de Curador y Administrador."""
+    if db.query(Usuario).filter(Usuario.correo_electronico == payload.correo_electronico).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El correo ya está registrado")
+
+    rol = db.get(Rol, payload.id_rol)
+    if rol is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado")
+
+    mfa_forzado = payload.mfa_activado or rol.nombre_rol in ("Administrador", "Curador")
+    nuevo_usuario = Usuario(
+        correo_electronico=payload.correo_electronico,
+        contrasenia=hash_password(payload.contrasenia),
+        id_rol=rol.id_rol,
+        mfa_activado=mfa_forzado,
+        estado_cuenta="Activo",
+    )
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+
+    log_action(
+        db,
+        id_usuario=admin.id_usuario,
+        accion=ACCION_CREACION_USUARIO_INTERNO,
+        detalles=f"Usuario interno creado: {nuevo_usuario.correo_electronico} (rol={rol.nombre_rol})",
+        tabla="usuario",
+    )
+    return nuevo_usuario
 
 
 @router.patch(

@@ -16,6 +16,17 @@ from app.services.email_service import enviar_resultado_validacion_artista
 router = APIRouter()
 
 
+@router.get("", response_model=list[PerfilArtistaOut])
+def listar_artistas_verificados(db: Session = Depends(get_db)):
+    """Directorio público de artistas con perfil 'Verificado'."""
+    return (
+        db.query(PerfilArtista)
+        .filter(PerfilArtista.estado_validacion == "Verificado")
+        .order_by(PerfilArtista.id_artista.asc())
+        .all()
+    )
+
+
 @router.get(
     "/pendientes",
     response_model=list[PerfilArtistaOut],

@@ -93,6 +93,9 @@ class Settings(BaseSettings):
     WOMPI_CHECKOUT_URL: str = "https://checkout.wompi.co/p/"
     # Sandbox por defecto; cambiar a https://production.wompi.co/v1 en vivo.
     WOMPI_API_BASE_URL: str = "https://sandbox.wompi.co/v1"
+    # Minutos máximos que una obra permanece en estado 'Reservado' mientras la
+    # transacción sigue en 'Procesando' sin confirmación del webhook de Wompi.
+    CHECKOUT_RESERVATION_EXPIRE_MINUTES: int = 30
 
     # CORS: orígenes permitidos para el frontend en React
     # (Create React App usa :3000, Vite usa :5173 por defecto)
