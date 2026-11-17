@@ -1,26 +1,57 @@
-import { Link, useParams } from "react-router-dom";
+import { type FormEvent, useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, FileText, ShieldCheck, ShieldX } from "lucide-react";
+import { FileText } from "lucide-react";
 import { verificarSello } from "../api/certificados";
+import { urlPreviewObra } from "../api/obras";
 import { obtenerTrazabilidad } from "../api/trazabilidad";
+import { Ambiente } from "../components/escena/Ambiente";
 import { LineaTrazabilidad } from "../components/LineaTrazabilidad";
-import { Spinner } from "../components/ui/Spinner";
+import { Banner } from "../components/ui/Banner";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { SelloCertificado } from "../components/ui/SelloCertificado";
+import { PageProgressBar, Skeleton } from "../components/ui/Skeleton";
 import { formatearFecha } from "../lib/formato";
 
-/** Destino público del QR de validación del Trust Engine
- * (`{FRONTEND_URL}/verificar/{sello}`). Accesible sin sesión: cualquier persona
- * frente a la obra debe poder comprobar su autenticidad. */
+/**
+ * 6.7 Verificar certificado (Nivel 2):
+ * Contenido centrado de 560 px. El sello (disco de 160 px) con "VERIFICAR" en Anton,
+ * H1 "Verificar certificado", el texto "Escribe el código que aparece en tu certificado.",
+ * un campo en formato caja y el botón "Verificar".
+ * Resultado válido: el borde del sello pasa a --exito y aparece el banner salvia "Certificado válido",
+ * ficha con miniatura de la obra, título, artista, año, fecha de emisión, titular actual y código,
+ * más el botón "Ver obra".
+ * No encontrado: banner ámbar "No encontramos un certificado con ese código. Revisa que esté completo e inténtalo de nuevo."
+ */
 export function VerificarCertificadoPage() {
   const { sello } = useParams<{ sello: string }>();
+  const navigate = useNavigate();
+
+  const selloUrl = (sello ?? "").trim();
+  const esMarcadorInicial = selloUrl === "" || selloUrl.toLowerCase() === "buscar";
+
+  const [codigoInput, setCodigoInput] = useState(esMarcadorInicial ? "" : selloUrl);
+  const [errorCampo, setErrorCampo] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    document.title = "Verificar certificado · Pixel & Lienzo";
+  }, []);
+
+  useEffect(() => {
+    setCodigoInput(esMarcadorInicial ? "" : selloUrl);
+  }, [esMarcadorInicial, selloUrl]);
+
+  const codigoConsulta = esMarcadorInicial ? "" : selloUrl;
 
   const {
     data: verificacion,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["verificar-certificado", sello],
-    queryFn: () => verificarSello(sello!),
-    enabled: !!sello,
+    queryKey: ["verificar-certificado", codigoConsulta],
+    queryFn: () => verificarSello(codigoConsulta),
+    enabled: codigoConsulta.length > 0,
     retry: false,
   });
 
@@ -30,116 +61,190 @@ export function VerificarCertificadoPage() {
     enabled: !!verificacion,
   });
 
-  if (isLoading) return <Spinner etiqueta="Verificando sello de autenticidad…" />;
+  const alEnviar = (e: FormEvent) => {
+    e.preventDefault();
+    const limpio = codigoInput.trim().replace(/\s+/g, "");
+    if (limpio.length < 8) {
+      setErrorCampo("Ingresa un código de al menos 8 caracteres.");
+      return;
+    }
+    setErrorCampo(undefined);
+    navigate(`/verificar/${encodeURIComponent(limpio)}`);
+  };
 
-  if (isError || !verificacion) {
-    return (
-      <div className="mx-auto max-w-xl px-6 py-24 text-center">
-        <ShieldX size={44} className="mx-auto text-terracota" />
-        <h1 className="mt-7 font-[var(--font-display)] text-3xl font-medium text-marfil">
-          Sello no reconocido
-        </h1>
-        <p className="mt-4 text-sm leading-relaxed text-marfil-suave">
-          No existe ningún certificado de autenticidad asociado a este código en Pixel y Lienzo. Si lo
-          obtuviste escaneando un QR junto a una obra, desconfía de su procedencia.
-        </p>
-        {sello && (
-          <p className="mt-6 break-all font-mono text-[0.7rem] text-marfil-suave/60">{sello}</p>
-        )}
-        <Link to="/" className="mt-9 inline-block text-sm text-ocre underline">
-          Ir al catálogo
-        </Link>
-      </div>
-    );
-  }
-
-  const { sello_valido, certificado, obra } = verificacion;
+  const esValido = Boolean(verificacion && verificacion.sello_valido);
+  const ultimoRegistro =
+    trazabilidad && trazabilidad.length > 0
+      ? trazabilidad[trazabilidad.length - 1]
+      : undefined;
+  const titularActual = ultimoRegistro
+    ? `Coleccionista N.º ${ultimoRegistro.id_propietario_nuevo}`
+    : verificacion
+      ? `Artista N.º ${verificacion.obra.id_artista}`
+      : "";
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-16 sm:px-10">
-      <div className="relative overflow-hidden rounded-lg border border-antracita-suave bg-antracita p-9 text-center sm:p-12">
-        <div
-          className="pointer-events-none absolute inset-0 -z-0"
-          style={{
-            background: sello_valido
-              ? "radial-gradient(circle at 50% 0%, rgba(201,162,75,0.16), transparent 60%)"
-              : "radial-gradient(circle at 50% 0%, rgba(194,86,74,0.16), transparent 60%)",
-          }}
-        />
-        <div className="relative">
-          {sello_valido ? (
-            <ShieldCheck size={52} className="mx-auto text-ocre" />
-          ) : (
-            <AlertTriangle size={52} className="mx-auto text-terracota" />
-          )}
-          <p className="mt-6 text-[0.68rem] uppercase tracking-[0.2em] text-marfil-suave">
-            Verificación de autenticidad
-          </p>
-          <h1 className="mt-3 font-[var(--font-display)] text-3xl font-medium text-marfil sm:text-4xl">
-            {sello_valido ? "Certificado auténtico" : "El sello no coincide"}
+    <div className="relative min-h-screen py-[var(--espacio-64)]">
+      {isLoading && <PageProgressBar etiqueta="Verificando certificado…" />}
+      <Ambiente nivel={2} />
+
+      <div className="relative z-10 mx-auto w-full max-w-[var(--contenedor-verificar)] px-[var(--espacio-16)]">
+        {/* Cabecera centrada con el Sello de 160 px */}
+        <div className="flex flex-col items-center text-center">
+          <SelloCertificado
+            etiqueta="VERIFICAR"
+            codigo={verificacion?.certificado.codigo_qr_validacion ?? (codigoConsulta || undefined)}
+            valido={esValido}
+          />
+
+          <h1 className="voz-h1 mt-[var(--espacio-24)] text-[color:var(--tinta)]">
+            Verificar certificado
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-marfil-suave">
-            {sello_valido
-              ? "El sello criptográfico coincide con la ficha técnica registrada en Pixel y Lienzo: los datos de la obra no han sido alterados desde su certificación."
-              : "Existe un certificado con este código, pero la ficha técnica de la obra ya no coincide con lo que se certificó. Recomendamos contactar a la galería antes de cualquier transacción."}
+
+          <p className="voz-cuerpo mt-[var(--espacio-8)] text-[color:var(--tinta-suave)]">
+            Escribe el código que aparece en tu certificado.
           </p>
         </div>
-      </div>
 
-      <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-2">
-        <div>
-          <h2 className="font-[var(--font-display)] text-2xl font-medium text-marfil">Obra certificada</h2>
-          <dl className="mt-6 divide-y divide-antracita-suave/70 border-y border-antracita-suave/70 text-sm">
-            {[
-              ["Título", obra.titulo],
-              ["Técnica", obra.tecnica],
-              ["Dimensiones", obra.dimensiones],
-              ["Año de creación", obra.anio_creacion ? String(obra.anio_creacion) : "No declarado"],
-              ["Artista", `N.º ${obra.id_artista}`],
-              ["Emisión del certificado", formatearFecha(certificado.sello_tiempo)],
-            ].map(([etiqueta, valor]) => (
-              <div key={etiqueta} className="flex items-baseline justify-between gap-6 py-3.5">
-                <dt className="text-xs uppercase tracking-wider text-marfil-suave/70">{etiqueta}</dt>
-                <dd className="text-right font-medium text-marfil">{valor}</dd>
-              </div>
-            ))}
-          </dl>
+        {/* Formulario con campo en formato caja y botón "Verificar" */}
+        <form
+          onSubmit={alEnviar}
+          noValidate
+          className="mt-[var(--espacio-32)] flex flex-col gap-[var(--espacio-16)]"
+        >
+          <Input
+            variante="caja"
+            label="Código del certificado"
+            placeholder="Ej. PYL-2026-0001 o sello SHA-256"
+            value={codigoInput}
+            onChange={(e) => {
+              setCodigoInput(e.target.value);
+              if (errorCampo) setErrorCampo(undefined);
+            }}
+            error={errorCampo}
+            className="codigo-certificado"
+          />
 
-          <p className="mt-7 text-xs uppercase tracking-wider text-marfil-suave/70">Sello SHA-256</p>
-          <p className="mt-1.5 break-all font-mono text-[0.7rem] leading-relaxed text-marfil-suave">
-            {certificado.codigo_qr_validacion}
-          </p>
+          <Button type="submit" variante="primario" cargando={isLoading} className="w-full">
+            Verificar
+          </Button>
+        </form>
 
-          <div className="mt-8 flex flex-wrap items-center gap-6">
-            <a
-              href={certificado.pdf_certificado_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-ocre hover:underline"
-            >
-              <FileText size={16} /> Ver certificado
-            </a>
-            <Link
-              to={`/obras/${obra.uid}`}
-              className="inline-flex items-center gap-2 text-sm text-marfil-suave hover:text-ocre"
-            >
-              Ficha completa de la obra <ArrowRight size={15} />
-            </Link>
-          </div>
-        </div>
+        {/* Estados de verificación */}
+        <div className="mt-[var(--espacio-32)] flex flex-col gap-[var(--espacio-24)]">
+          {isLoading && (
+            <div className="flex flex-col gap-[var(--espacio-16)]" role="status" aria-label="Verificando certificado">
+              <Skeleton className="h-[var(--espacio-48)] w-full" />
+              <Skeleton className="h-[240px] w-full" />
+            </div>
+          )}
 
-        <div>
-          <h2 className="font-[var(--font-display)] text-2xl font-medium text-marfil">Trazabilidad</h2>
-          <p className="mt-2 text-sm leading-relaxed text-marfil-suave">
-            Cadena de propiedad registrada por la galería desde el ingreso de la pieza.
-          </p>
-          <div className="mt-7">
-            {trazabilidad ? (
-              <LineaTrazabilidad registros={trazabilidad} idArtista={obra.id_artista} />
-            ) : (
-              <Spinner etiqueta="" />
-            )}
-          </div>
+          {!isLoading && isError && codigoConsulta.length > 0 && (
+            <Banner variante="aviso">
+              No encontramos un certificado con ese código. Revisa que esté completo e inténtalo de nuevo.
+            </Banner>
+          )}
+
+          {!isLoading && verificacion && !verificacion.sello_valido && (
+            <Banner variante="aviso">
+              Este certificado presenta una discrepancia con la ficha técnica actual de la obra.
+            </Banner>
+          )}
+
+          {!isLoading && verificacion && verificacion.sello_valido && (
+            <>
+              <Banner variante="exito">Certificado válido</Banner>
+
+              {/* Ficha de la obra certificada (sin correo, dirección, método de pago ni precio por privacidad 6.7) */}
+              <article className="border border-[color:var(--borde-reposo)] bg-[color:var(--fondo)] p-[var(--espacio-24)] shadow-[var(--sombra-tarjeta)]">
+                <div className="flex flex-col gap-[var(--espacio-24)] sm:flex-row sm:items-center">
+                  <div className="flex h-[var(--miniatura-lista)] w-[var(--miniatura-lista)] shrink-0 items-center justify-center border border-[color:var(--divisor)] bg-[color:var(--vacio)] p-[var(--espacio-8)]">
+                    <img
+                      src={urlPreviewObra(verificacion.obra.id_obra)}
+                      alt={verificacion.obra.titulo}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <h2 className="voz-h3 text-[color:var(--tinta)]">
+                      {verificacion.obra.titulo}
+                    </h2>
+                    <p className="voz-cursiva mt-[var(--espacio-4)] text-[color:var(--tinta-suave)]">
+                      Artista N.º {verificacion.obra.id_artista}
+                      {verificacion.obra.anio_creacion ? ` · ${verificacion.obra.anio_creacion}` : ""}
+                    </p>
+                    <p className="voz-cuerpo-pequeno mt-[var(--espacio-4)] text-[color:var(--tinta-suave)]">
+                      {verificacion.obra.tecnica} · {verificacion.obra.dimensiones}
+                    </p>
+                  </div>
+                </div>
+
+                <dl className="mt-[var(--espacio-24)] divide-y divide-[color:var(--divisor)] border-y border-[color:var(--divisor)]">
+                  <div className="flex items-baseline justify-between gap-[var(--espacio-16)] py-[var(--espacio-12)]">
+                    <dt className="voz-cuerpo-pequeno text-[color:var(--tinta-suave)]">
+                      Fecha de emisión
+                    </dt>
+                    <dd className="voz-cuerpo-pequeno font-semibold text-[color:var(--tinta)]">
+                      {formatearFecha(verificacion.certificado.sello_tiempo)}
+                    </dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-[var(--espacio-16)] py-[var(--espacio-12)]">
+                    <dt className="voz-cuerpo-pequeno text-[color:var(--tinta-suave)]">
+                      Titular actual
+                    </dt>
+                    <dd className="voz-cuerpo-pequeno font-semibold text-[color:var(--tinta)]">
+                      {titularActual}
+                    </dd>
+                  </div>
+                  <div className="flex flex-col gap-[var(--espacio-4)] py-[var(--espacio-12)]">
+                    <dt className="voz-cuerpo-pequeno text-[color:var(--tinta-suave)]">
+                      Código del certificado
+                    </dt>
+                    <dd className="codigo-certificado break-all text-[length:var(--text-minimo)] text-[color:var(--tinta)]">
+                      {verificacion.certificado.codigo_qr_validacion ?? codigoConsulta}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="mt-[var(--espacio-24)] flex flex-wrap items-center justify-between gap-[var(--espacio-16)]">
+                  <Link to={`/obras/${verificacion.obra.uid}`}>
+                    <Button variante="secundario">Ver obra</Button>
+                  </Link>
+
+                  <a
+                    href={verificacion.certificado.pdf_certificado_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="enlace-acceso inline-flex items-center gap-[var(--espacio-8)] text-[length:var(--text-cuerpo-pequeno)]"
+                  >
+                    <FileText size={16} strokeWidth={1.5} aria-hidden="true" />
+                    <span>Descargar certificado</span>
+                  </a>
+                </div>
+              </article>
+
+              {trazabilidad && (
+                <section
+                  aria-labelledby="heading-trazabilidad-verificacion"
+                  className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-[var(--espacio-24)]"
+                >
+                  <h3
+                    id="heading-trazabilidad-verificacion"
+                    className="voz-etiqueta mb-[var(--espacio-16)] text-[color:var(--tinta-suave)]"
+                  >
+                    Procedencia registrada
+                  </h3>
+                  <LineaTrazabilidad
+                    registros={trazabilidad}
+                    idArtista={verificacion.obra.id_artista}
+                  />
+                </section>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

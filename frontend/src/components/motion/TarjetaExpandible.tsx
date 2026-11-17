@@ -4,7 +4,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-/** Muelle pedido para el morph: rápido al arrancar y sin rebote largo. */
 const MUELLE = { type: "spring" as const, stiffness: 300, damping: 25 };
 const SIN_MOVIMIENTO = { duration: 0 };
 
@@ -20,12 +19,6 @@ export interface PiezaTarjeta {
   descripcion: string;
 }
 
-/**
- * Tarjeta que se expande a un diálogo centrado.
- * El mismo `layoutId` en la vista previa y en el modal hace que Framer Motion
- * interpole posición y tamaño (continuidad visual) en lugar de un fade suelto.
- * `"use client"` la deja lista para el App Router de Next.js.
- */
 export function TarjetaExpandible({ pieza }: { pieza: PiezaTarjeta }) {
   const [abierta, setAbierta] = useState(false);
   const [portalListo, setPortalListo] = useState(false);
@@ -69,7 +62,7 @@ export function TarjetaExpandible({ pieza }: { pieza: PiezaTarjeta }) {
           <motion.button
             type="button"
             aria-label="Cerrar detalles"
-            className="absolute inset-0 bg-carbon/80 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-[color:var(--velo-modal)] border-0 cursor-pointer"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -77,7 +70,7 @@ export function TarjetaExpandible({ pieza }: { pieza: PiezaTarjeta }) {
             onClick={cerrar}
           />
 
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4 sm:p-8">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-[var(--espacio-16)] sm:p-[var(--espacio-32)]">
             <motion.article
               layoutId={marco}
               transition={transicion}
@@ -85,22 +78,24 @@ export function TarjetaExpandible({ pieza }: { pieza: PiezaTarjeta }) {
               role="dialog"
               aria-modal="true"
               aria-labelledby={tituloId}
-              className="pointer-events-auto grid max-h-[min(40rem,100%)] w-full max-w-3xl grid-cols-1 overflow-hidden bg-antracita shadow-[0_30px_80px_-20px_rgba(0,0,0,0.75)] sm:grid-cols-[0.9fr_1.1fr]"
+              className="pointer-events-auto grid max-h-[min(40rem,100%)] w-full max-w-3xl grid-cols-1 overflow-hidden border border-[color:var(--borde-reposo)] bg-[color:var(--fondo)] shadow-[var(--sombra-tarjeta)] sm:grid-cols-[0.9fr_1.1fr]"
             >
-              <motion.img
-                layoutId={imagen}
-                src={pieza.imagen}
-                alt=""
-                transition={transicion}
-                className="h-56 w-full object-cover sm:h-full"
-              />
+              <div className="flex items-center justify-center bg-[color:var(--vacio)] p-[var(--espacio-16)]">
+                <motion.img
+                  layoutId={imagen}
+                  src={pieza.imagen}
+                  alt={pieza.imagenAlt}
+                  transition={transicion}
+                  className="max-h-64 w-full object-contain sm:max-h-full"
+                />
+              </div>
 
-              <div className="flex min-h-0 flex-col p-6 sm:p-8">
-                <div className="flex items-start justify-between gap-4">
+              <div className="flex min-h-0 flex-col p-[var(--espacio-24)] sm:p-[var(--espacio-32)]">
+                <div className="flex items-start justify-between gap-[var(--espacio-16)]">
                   <motion.p
                     layoutId={badge}
                     transition={transicion}
-                    className="text-[0.68rem] font-medium uppercase tracking-[0.16em] text-ocre"
+                    className="voz-etiqueta text-[color:var(--riel)]"
                   >
                     {pieza.tecnica}
                   </motion.p>
@@ -108,7 +103,7 @@ export function TarjetaExpandible({ pieza }: { pieza: PiezaTarjeta }) {
                     ref={cerrarRef}
                     type="button"
                     onClick={cerrar}
-                    className="shrink-0 text-xs uppercase tracking-[0.14em] text-marfil-suave hover:text-ocre"
+                    className="enlace-acceso shrink-0 bg-transparent border-0 text-[length:var(--text-cuerpo-pequeno)] cursor-pointer"
                   >
                     Cerrar
                   </button>
@@ -118,7 +113,7 @@ export function TarjetaExpandible({ pieza }: { pieza: PiezaTarjeta }) {
                   layoutId={titulo}
                   id={tituloId}
                   transition={transicion}
-                  className="mt-3 font-[var(--font-display)] text-3xl leading-tight text-marfil sm:text-4xl"
+                  className="voz-h2 mt-[var(--espacio-12)] text-[color:var(--tinta)]"
                 >
                   {pieza.titulo}
                 </motion.h2>
@@ -129,13 +124,15 @@ export function TarjetaExpandible({ pieza }: { pieza: PiezaTarjeta }) {
                   exit={{ opacity: 0 }}
                   transition={reducirMovimiento ? SIN_MOVIMIENTO : { ...MUELLE, delay: 0.06 }}
                 >
-                  <p className="mt-3 text-sm text-marfil-suave">
-                    {pieza.artista}
-                    <span className="mx-2 text-antracita-suave">/</span>
-                    {pieza.anio}
+                  <p className="voz-cursiva mt-[var(--espacio-12)] text-[color:var(--tinta-suave)]">
+                    {pieza.artista} · {pieza.anio}
                   </p>
-                  <p className="mt-5 text-sm leading-relaxed text-marfil-suave">{pieza.descripcion}</p>
-                  <p className="mt-6 font-[var(--font-display)] text-2xl text-ocre">{pieza.precio}</p>
+                  <p className="voz-cuerpo mt-[var(--espacio-16)] text-[color:var(--tinta-suave)]">
+                    {pieza.descripcion}
+                  </p>
+                  <p className="precio-obra mt-[var(--espacio-24)] font-[var(--fuente-texto)] text-[length:var(--text-h3)] font-semibold text-[color:var(--tinta)]">
+                    {pieza.precio}
+                  </p>
                 </motion.div>
               </div>
             </motion.article>
@@ -150,13 +147,6 @@ export function TarjetaExpandible({ pieza }: { pieza: PiezaTarjeta }) {
       {abierta ? (
         <div className="invisible" aria-hidden>
           <div className="aspect-[4/5] w-full" />
-          <div className="flex items-end justify-between gap-4 p-5">
-            <div>
-              <p className="text-[0.68rem] uppercase tracking-[0.16em]">{pieza.tecnica}</p>
-              <h3 className="mt-1 font-[var(--font-display)] text-2xl leading-tight">{pieza.titulo}</h3>
-            </div>
-            <span className="shrink-0 px-3 py-2 text-[0.65rem] uppercase">Ver detalles</span>
-          </div>
         </div>
       ) : (
         <motion.button
@@ -169,34 +159,36 @@ export function TarjetaExpandible({ pieza }: { pieza: PiezaTarjeta }) {
           aria-label={`Ver detalles de ${pieza.titulo}`}
           whileHover={reducirMovimiento ? undefined : { y: -4 }}
           whileTap={reducirMovimiento ? undefined : { scale: 0.98 }}
-          className="group block w-full overflow-hidden bg-antracita text-left"
+          className="group block w-full overflow-hidden border border-[color:var(--borde-reposo)] bg-[color:var(--fondo)] text-left shadow-[var(--sombra-tarjeta)] hover:border-[color:var(--borde-hover)] cursor-pointer"
         >
-          <motion.img
-            layoutId={imagen}
-            src={pieza.imagen}
-            alt={pieza.imagenAlt}
-            transition={transicion}
-            className="aspect-[4/5] w-full object-cover"
-          />
-          <div className="flex items-end justify-between gap-4 p-5">
+          <div className="flex aspect-[4/5] w-full items-center justify-center bg-[color:var(--vacio)] p-[var(--espacio-12)]">
+            <motion.img
+              layoutId={imagen}
+              src={pieza.imagen}
+              alt={pieza.imagenAlt}
+              transition={transicion}
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <div className="flex items-end justify-between gap-[var(--espacio-16)] border-t border-[color:var(--divisor)] p-[var(--espacio-24)]">
             <div>
               <motion.p
                 layoutId={badge}
                 transition={transicion}
-                className="text-[0.68rem] font-medium uppercase tracking-[0.16em] text-ocre"
+                className="voz-etiqueta text-[color:var(--riel)]"
               >
                 {pieza.tecnica}
               </motion.p>
               <motion.h3
                 layoutId={titulo}
                 transition={transicion}
-                className="mt-1 font-[var(--font-display)] text-2xl leading-tight text-marfil"
+                className="voz-h3 mt-[var(--espacio-4)] text-[color:var(--tinta)]"
               >
                 {pieza.titulo}
               </motion.h3>
             </div>
-            <span className="shrink-0 border border-ocre/40 px-3 py-2 text-[0.65rem] uppercase tracking-[0.14em] text-ocre transition-colors group-hover:border-ocre group-hover:bg-ocre group-hover:text-carbon">
-              Ver detalles
+            <span className="voz-etiqueta shrink-0 border border-[color:var(--borde-reposo)] px-[var(--espacio-12)] py-[var(--espacio-8)] text-[color:var(--tinta)]">
+              Ver obra
             </span>
           </div>
         </motion.button>

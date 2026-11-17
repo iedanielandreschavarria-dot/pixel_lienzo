@@ -19,11 +19,11 @@ function SueloSala({ className }: { className?: string }) {
         style={{
           opacity: 0.4,
           backgroundImage:
-            "linear-gradient(to right, rgba(244,239,230,0.45) 1px, transparent 1px), linear-gradient(to bottom, rgba(244,239,230,0.45) 1px, transparent 1px)",
+            "linear-gradient(to right, var(--divisor) 1px, transparent 1px), linear-gradient(to bottom, var(--divisor) 1px, transparent 1px)",
           backgroundSize: "64px 64px",
           transform: "perspective(900px) rotateX(62deg)",
-          maskImage: "linear-gradient(to top, rgba(0,0,0,0.85), transparent 80%)",
-          WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.85), transparent 80%)",
+          maskImage: "linear-gradient(to top, var(--vacio), transparent 80%)",
+          WebkitMaskImage: "linear-gradient(to top, var(--vacio), transparent 80%)",
         }}
       />
     </div>
@@ -48,7 +48,7 @@ function RejillaDensa({
   return (
     <div
       className={clsx(
-        "relative h-full w-full overflow-hidden bg-carbon [--fade-stop:#0c0c0e]",
+        "relative h-full w-full overflow-hidden bg-[color:var(--fondo)] [--fade-stop:var(--fondo)]",
         className,
       )}
       style={{
@@ -71,7 +71,7 @@ function RejillaDensa({
           casillas.map((_, i) => (
             <div
               key={i}
-              className="min-h-px min-w-px border border-marfil/15 bg-transparent transition-colors duration-[1500ms] hover:border-ocre/70 hover:bg-ocre/25 hover:duration-0"
+              className="min-h-px min-w-px border border-[color:var(--divisor)] bg-transparent transition-colors duration-[1500ms] hover:border-[color:var(--riel)] hover:bg-[color:var(--fila-hover)] hover:duration-0"
             />
           ))}
       </div>

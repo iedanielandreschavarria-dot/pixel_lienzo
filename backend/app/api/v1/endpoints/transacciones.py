@@ -251,23 +251,8 @@ def listar_mis_transacciones(
     usuario: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Listado de transacciones según el rol del usuario autenticado:
-    - Administrador (RF 3.2.3): todas las transacciones de la galería.
-    - Artista (RF 3.4.3): ventas asociadas a sus propias obras.
-    - Comprador: historial de sus compras personales.
-    """
+    """Historial de compras del usuario autenticado (MOD3-PAY-15)."""
     _liberar_reservas_vencidas(db)
-    rol_usuario = usuario.rol.nombre_rol
-    if rol_usuario == ROL_ADMINISTRADOR:
-        return db.query(Transaccion).order_by(Transaccion.id_transaccion.desc()).all()
-    if rol_usuario == ROL_ARTISTA:
-        return (
-            db.query(Transaccion)
-            .join(ObraArte, Transaccion.id_obra == ObraArte.id_obra)
-            .filter(ObraArte.id_artista == usuario.id_usuario)
-            .order_by(Transaccion.id_transaccion.desc())
-            .all()
-        )
     return (
         db.query(Transaccion)
         .filter(Transaccion.id_comprador == usuario.id_usuario)

@@ -35,9 +35,10 @@ def _verificar_acceso(envio: EnvioLogistica, usuario: Usuario, db: Session) -> T
     los de sus propias obras (RF 4.2.1); Administrador y Curador cualquiera."""
     transaccion = db.get(Transaccion, envio.id_transaccion)
     rol_usuario = usuario.rol.nombre_rol
-    if rol_usuario == ROL_COMPRADOR and (
-        transaccion is None or transaccion.id_comprador != usuario.id_usuario
-    ):
+    if rol_usuario == ROL_COMPRADOR:
+        if transaccion is None or transaccion.id_comprador != usuario.id_usuario:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene acceso a este envío")
+    elif rol_usuario not in (ROL_ADMINISTRADOR, ROL_CURADOR):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene acceso a este envío")
     if rol_usuario == ROL_ARTISTA:
         obra = db.get(ObraArte, transaccion.id_obra) if transaccion else None
@@ -81,7 +82,11 @@ def crear_envio(payload: EnvioCreate, db: Session = Depends(get_db)):
     return envio
 
 
-@router.get("", response_model=list[EnvioOut])
+@router.get(
+    "",
+    response_model=list[EnvioOut],
+    dependencies=[Depends(require_roles(ROL_COMPRADOR, ROL_CURADOR, ROL_ADMINISTRADOR))],
+)
 def listar_envios(
     usuario: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),

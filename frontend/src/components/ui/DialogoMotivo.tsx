@@ -3,7 +3,7 @@ import { Modal } from "./Modal";
 import { Textarea } from "./Textarea";
 import { Button } from "./Button";
 
-interface DialogoMotivoProps {
+export interface DialogoMotivoProps {
   abierto: boolean;
   onCerrar: () => void;
   onConfirmar: (motivo: string) => Promise<void> | void;
@@ -12,12 +12,13 @@ interface DialogoMotivoProps {
   etiquetaCampo?: string;
   etiquetaConfirmar?: string;
   placeholder?: string;
+  minCaracteres?: number;
+  destructivo?: boolean;
 }
 
-/** Diálogo compartido para las acciones curatoriales que exigen justificar la
- * decisión (rechazar un artista, devolver una obra con observaciones). El
- * motivo es obligatorio: es lo que viaja al correo del artista y al log de
- * auditoría. */
+/**
+ * Diálogo compartido para las acciones curatoriales y confirmaciones destructivas (4.8 y 6.14).
+ */
 export function DialogoMotivo({
   abierto,
   onCerrar,
@@ -27,6 +28,8 @@ export function DialogoMotivo({
   etiquetaCampo = "Motivo",
   etiquetaConfirmar = "Confirmar",
   placeholder,
+  minCaracteres = 20,
+  destructivo = true,
 }: DialogoMotivoProps) {
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState<string>();
@@ -39,8 +42,8 @@ export function DialogoMotivo({
   };
 
   const confirmar = async () => {
-    if (motivo.trim().length < 10) {
-      setError("Describe el motivo con al menos 10 caracteres.");
+    if (motivo.trim().length < minCaracteres) {
+      setError(`Describe el motivo con al menos ${minCaracteres} caracteres.`);
       return;
     }
     setEnviando(true);
@@ -54,8 +57,14 @@ export function DialogoMotivo({
   };
 
   return (
-    <Modal abierto={abierto} onCerrar={cerrar} titulo={titulo} descripcion={descripcion}>
-      <div className="flex flex-col gap-4">
+    <Modal
+      abierto={abierto}
+      onCerrar={cerrar}
+      titulo={titulo}
+      descripcion={descripcion}
+      destructivo={destructivo}
+    >
+      <div className="flex flex-col gap-[var(--espacio-16)]">
         <Textarea
           label={etiquetaCampo}
           rows={4}
@@ -68,11 +77,15 @@ export function DialogoMotivo({
             if (error) setError(undefined);
           }}
         />
-        <div className="flex justify-end gap-3">
-          <Button variante="fantasma" onClick={cerrar} disabled={enviando}>
+        <div className="flex justify-end gap-[var(--espacio-12)]">
+          <Button variante="secundario" onClick={cerrar} disabled={enviando}>
             Cancelar
           </Button>
-          <Button variante="peligro" onClick={confirmar} cargando={enviando}>
+          <Button
+            variante={destructivo ? "destructivo" : "primario"}
+            onClick={confirmar}
+            cargando={enviando}
+          >
             {etiquetaConfirmar}
           </Button>
         </div>
@@ -80,3 +93,4 @@ export function DialogoMotivo({
     </Modal>
   );
 }
+

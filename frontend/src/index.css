@@ -1,112 +1,505 @@
 @import "tailwindcss";
+@import "./styles/escena.css";
 
-@theme {
-  --font-display: "Playfair Display", ui-serif, Georgia, serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-
-  /* Dark premium — sala de exposición de noche: fondos casi negros,
-     superficies en antracita y un único acento metálico (oro). Las obras
-     son las únicas protagonistas de color; la UI se mantiene deliberadamente
-     apagada alrededor de ellas. */
-  --color-carbon: #0c0c0e; /* fondo base de la página */
-  --color-carbon-suave: #16161a; /* fondo elevado: header/footer/hero */
-  --color-antracita: #1d1d21; /* superficies: tarjetas, inputs */
-  --color-antracita-suave: #2b2b30; /* bordes / hover de superficies */
-  --color-marfil: #f4efe6; /* texto principal (marfil cálido) */
-  --color-marfil-suave: #9c968c; /* texto secundario / metadatos */
-  --color-ocre: #c9a24b; /* acento metálico dorado — CTA, precios, estados activos */
-  --color-ocre-suave: #e2c589; /* dorado claro — hover del acento */
-  --color-terracota: #c2564a; /* error / rechazo */
+/* ==========================================================
+   Tipografías locales en assets/fonts con font-display: swap
+   ========================================================== */
+@font-face {
+  font-family: "Gramon Mini Edition";
+  src: url("./assets/fonts/Gramon Mini Edition.woff2") format("woff2");
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
 }
 
+@font-face {
+  font-family: "TimesNewRomanMTStd";
+  src: url("./assets/fonts/TimesNewRomanMTStd.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================
+   Sección 3 — Fundamentos y Tokens del Kit de Identidad
+   ========================================================== */
+:root {
+  /* 3.1 Color [Definido] */
+  --vacio: #000000;
+  --fondo: #0a0808;
+  --tinta: #f2ece3;
+  --tinta-suave: #9a958f;
+  --profundidad: #4d0d0a;
+  --carmesi: #932512;
+  --incandescente: #d4421f;
+  --riel: #e0472b;
+  --aviso: #e8b04a;
+  --exito: #7fb58d;
+
+  /* Superficies y transparencias derivadas exclusivamente de los tokens */
+  --superficie-elevada: rgba(242, 236, 227, 0.04);
+  --campo-caja-fondo: rgba(242, 236, 227, 0.03);
+  --campo-caja-borde: rgba(242, 236, 227, 0.28);
+  --campo-subrayado-borde: rgba(242, 236, 227, 0.35);
+  --divisor: rgba(242, 236, 227, 0.12);
+  --esqueleto: rgba(242, 236, 227, 0.06);
+  --borde-reposo: rgba(224, 71, 43, 0.4);
+  --borde-hover: rgba(224, 71, 43, 0.8);
+  --borde-terciario: rgba(224, 71, 43, 0.7);
+  --fila-hover: rgba(147, 37, 18, 0.18);
+  --cabecera-fondo: rgba(10, 8, 8, 0.92);
+  --modal-velo: rgba(0, 0, 0, 0.8);
+
+  /* 3.2 Tipografía [Definido] */
+  --fuente-titulo: "Playfair Display", "TimesNewRomanMTStd", "Didot", "Bodoni MT", Georgia, serif;
+  --fuente-texto: "Cormorant Garamond", "Gramon Mini Edition", Garamond, Georgia, serif;
+  --fuente-poster: "Anton", Impact, "Arial Narrow", sans-serif;
+
+  --text-display: 4.4rem;
+  --text-display-movil: 2.6rem;
+  --text-h1: 3rem;
+  --text-h1-movil: 2.2rem;
+  --text-h2: 2.2rem;
+  --text-h2-movil: 1.7rem;
+  --text-h3: 1.5rem;
+  --text-h4: 1.15rem;
+  --text-cuerpo: 1.25rem;
+  --text-cuerpo-pequeno: 1.1rem;
+  --text-cursiva-min: 1.1rem;
+  --text-cursiva-max: 1.3rem;
+  --text-etiqueta: 1rem;
+  --text-dato: 1.15rem;
+  --text-campo: 1.3rem;
+  --text-minimo: 1rem; /* 16px mínimo absoluto */
+
+  /* 3.3 Espaciado y medidas [Definido]
+     Escala única permitida: 4, 8, 12, 16, 24, 32, 48, 64, 96, 128 px */
+  --espacio-4: 4px;
+  --espacio-8: 8px;
+  --espacio-12: 12px;
+  --espacio-16: 16px;
+  --espacio-24: 24px;
+  --espacio-32: 32px;
+  --espacio-48: 48px;
+  --espacio-64: 64px;
+  --espacio-96: 96px;
+  --espacio-128: 128px;
+
+  --contenedor-max: 1280px;
+  --contenedor-panel: 1200px;
+  --contenedor-legal: 720px;
+  --contenedor-lectura: 720px;
+  --contenedor-formulario-amplio: 720px;
+  --contenedor-resultado: 640px;
+  --contenedor-verificar: 560px;
+  --contenedor-formulario: 520px;
+  --modal-ancho: 520px;
+  --sidebar-ancho: 240px;
+  --filtros-ancho: 280px;
+  --retrato-artista: 280px;
+  --sello-diametro: 160px;
+  --miniatura-96: 96px;
+  --alto-cabecera: 64px;
+  --alto-barra-movil: 72px;
+  --alto-control: 48px;
+  --alto-control-compacto: 40px;
+  --area-tactil-min: 44px;
+  --alto-estado: 28px;
+
+  /* 3.4 Bordes, formas y sombras [Definido] */
+  --radio-recto: 0px;
+  --radio-pildora: 999px;
+  --radio-circulo: 50%;
+
+  --sombra-tarjeta: 0 18px 50px rgba(0, 0, 0, 0.6);
+  --resplandor-primario: 0 0 30px rgba(190, 30, 20, 0.45);
+  --resplandor-disco:
+    inset 0 0 70px 14px var(--vacio),
+    0 0 0 1.5px rgba(230, 70, 50, 0.42),
+    0 0 90px 10px rgba(160, 24, 16, 0.5);
+  --resplandor-disco-hover:
+    inset 0 0 70px 14px var(--vacio),
+    0 0 0 2px rgba(255, 110, 85, 0.7),
+    0 0 110px 16px rgba(190, 30, 20, 0.55);
+  --resplandor-sello-valido:
+    inset 0 0 40px 8px var(--vacio),
+    0 0 50px 4px rgba(127, 181, 141, 0.35);
+
+  /* 3.5 Movimiento [Definido] */
+  --duracion-ruta: 300ms;
+  --duracion-hover: 400ms;
+  --duracion-texto: 500ms;
+  --duracion-pagina: 600ms;
+  --duracion-momento-min: 800ms;
+  --duracion-momento-max: 1400ms;
+  --duracion-pulso: 2.4s;
+
+  --curva-base: ease;
+  --curva-momento: cubic-bezier(0.65, 0, 0.25, 1);
+
+  /* Medidas de Escena (sección 7.1) */
+  --W: min(96vw, 112vh, 1040px);
+  --D: calc(var(--W) * 0.56);
+  --margen-superior: 3vh;
+  --cy: calc(var(--margen-superior) + var(--W) * 0.54);
+  --p: 0;
+
+  color-scheme: dark;
+}
+
+@theme {
+  --font-display: var(--fuente-titulo);
+  --font-sans: var(--fuente-texto);
+  --font-serif: var(--fuente-texto);
+  --font-poster: var(--fuente-poster);
+
+  /* Tokens del Kit expuestos como utilidades Tailwind */
+  --color-vacio: var(--vacio);
+  --color-fondo: var(--fondo);
+  --color-tinta: var(--tinta);
+  --color-tinta-suave: var(--tinta-suave);
+  --color-profundidad: var(--profundidad);
+  --color-carmesi: var(--carmesi);
+  --color-incandescente: var(--incandescente);
+  --color-riel: var(--riel);
+  --color-aviso: var(--aviso);
+  --color-exito: var(--exito);
+
+  /* Alias de transición para componentes existentes que se migrarán en Fases 2-4 */
+  --color-carbon: var(--fondo);
+  --color-carbon-suave: var(--vacio);
+  --color-antracita: var(--fondo);
+  --color-antracita-suave: var(--borde-reposo);
+  --color-marfil: var(--tinta);
+  --color-marfil-suave: var(--tinta-suave);
+  --color-ocre: var(--riel);
+  --color-ocre-suave: var(--incandescente);
+  --color-terracota: var(--aviso);
+}
+
+/* ==========================================================
+   Estilos base globales (Sección 3 y 7)
+   ========================================================== */
 @layer base {
-  html {
-    scroll-behavior: smooth;
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
-    }
-
-    .animate-pulse {
-      animation: none !important;
-    }
+  html {
+    background-color: var(--fondo);
+    color: var(--tinta);
+    font-size: 16px;
+    scroll-behavior: smooth;
+    font-variant-numeric: lining-nums tabular-nums;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   body {
-    font-family: var(--font-sans);
-    background-color: var(--color-carbon);
-    color: var(--color-marfil);
+    font-family: var(--fuente-texto);
+    font-weight: 500;
+    font-size: var(--text-cuerpo);
+    line-height: 1.5;
+    background-color: var(--fondo);
+    color: var(--tinta);
+    font-variant-numeric: lining-nums tabular-nums;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 
+  /* 3.2 Jerarquía tipográfica */
   h1,
   h2,
   h3,
   h4 {
-    font-family: var(--font-display);
+    font-family: var(--fuente-titulo);
+    font-weight: 900;
+    color: var(--tinta);
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  h1 {
+    font-size: var(--text-h1-movil);
+    line-height: 1.1;
+  }
+
+  h2 {
+    font-size: var(--text-h2-movil);
+    line-height: 1.15;
+  }
+
+  h3 {
+    font-size: var(--text-h3);
+    line-height: 1.2;
+  }
+
+  h4 {
+    font-size: var(--text-h4);
+    line-height: 1.25;
+  }
+
+  @media (min-width: 600px) {
+    h1 {
+      font-size: var(--text-h1);
+    }
+
+    h2 {
+      font-size: var(--text-h2);
+    }
+  }
+
+  p {
+    max-width: 70ch;
+  }
+
+  /* 3.2 Cifras alineadas en tablas, precios, inputs y datos */
+  table,
+  th,
+  td,
+  input,
+  select,
+  textarea,
+  button,
+  time,
+  dd,
+  .dato,
+  .cifra {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  /* 3.4 y 7.2 Foco visible por teclado: contorno blanco de 2px con separación de 3px */
+  :focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 3px;
   }
 
   ::selection {
-    background-color: var(--color-ocre);
-    color: var(--color-carbon);
+    background-color: var(--carmesi);
+    color: var(--tinta);
   }
 
-  /* Scrollbar discreta, coherente con el resto del "chrome" oscuro. */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--color-carbon);
+    background: var(--fondo);
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-antracita-suave);
-    border-radius: 999px;
+    background: var(--borde-reposo);
+    border-radius: var(--radio-recto);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-marfil-suave);
+    background: var(--riel);
   }
 }
 
+/* ==========================================================
+   Clases tipográficas y de layout según Sección 3.2 y 3.3
+   ========================================================== */
 @layer utilities {
-  /* Grid tipo "masonry" sin JS: columnas CSS + cada tarjeta evita romperse
-     entre columnas. Deja que la relación de aspecto real de cada fotografía
-     defina la altura, en vez de forzar recortes uniformes. */
-  .galeria-masonry {
-    column-count: 1;
-    column-gap: 1.5rem;
+  .voz-display {
+    font-family: var(--fuente-titulo);
+    font-weight: 900;
+    font-size: var(--text-display-movil);
+    line-height: 1.05;
   }
-  @media (min-width: 640px) {
-    .galeria-masonry {
-      column-count: 2;
+  @media (min-width: 600px) {
+    .voz-display {
+      font-size: var(--text-display);
+    }
+  }
+
+  .voz-h1 {
+    font-family: var(--fuente-titulo);
+    font-weight: 900;
+    font-size: var(--text-h1-movil);
+    line-height: 1.1;
+  }
+  @media (min-width: 600px) {
+    .voz-h1 {
+      font-size: var(--text-h1);
+    }
+  }
+
+  .voz-h2 {
+    font-family: var(--fuente-titulo);
+    font-weight: 900;
+    font-size: var(--text-h2-movil);
+    line-height: 1.15;
+  }
+  @media (min-width: 600px) {
+    .voz-h2 {
+      font-size: var(--text-h2);
+    }
+  }
+
+  .voz-h3 {
+    font-family: var(--fuente-titulo);
+    font-weight: 900;
+    font-size: var(--text-h3);
+    line-height: 1.2;
+  }
+
+  .voz-h4 {
+    font-family: var(--fuente-titulo);
+    font-weight: 900;
+    font-size: var(--text-h4);
+    line-height: 1.25;
+  }
+
+  .voz-cuerpo {
+    font-family: var(--fuente-texto);
+    font-weight: 500;
+    font-size: var(--text-cuerpo);
+    line-height: 1.5;
+  }
+
+  .voz-cuerpo-pequeno {
+    font-family: var(--fuente-texto);
+    font-weight: 500;
+    font-size: var(--text-cuerpo-pequeno);
+    line-height: 1.5;
+  }
+
+  .voz-cursiva {
+    font-family: var(--fuente-texto);
+    font-weight: 500;
+    font-style: italic;
+    font-size: var(--text-cursiva-min);
+    line-height: 1.4;
+  }
+
+  .voz-etiqueta {
+    font-family: var(--fuente-poster);
+    font-weight: 400;
+    font-size: var(--text-etiqueta);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    line-height: 1.1;
+  }
+
+  .voz-dato {
+    font-family: var(--fuente-texto);
+    font-weight: 600;
+    font-size: var(--text-dato);
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  .codigo-certificado {
+    font-family: var(--fuente-texto);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  /* Contenedor estándar 3.3: máx 1280px, márgenes 16 (móvil), 24 (tableta), 48 (escritorio) */
+  .contenedor-pyl {
+    width: 100%;
+    max-width: var(--contenedor-max);
+    margin-inline: auto;
+    padding-inline: var(--espacio-16);
+  }
+  @media (min-width: 600px) {
+    .contenedor-pyl {
+      padding-inline: var(--espacio-24);
     }
   }
   @media (min-width: 1024px) {
-    .galeria-masonry {
-      column-count: 3;
+    .contenedor-pyl {
+      padding-inline: var(--espacio-48);
     }
   }
-  @media (min-width: 1536px) {
+
+  /* Rejilla de obras 3.3: 1 col <480, 2 col 480-1023, 3 col 1024-1279, 4 col >=1280, gap 24px */
+  .rejilla-obras,
+  .galeria-masonry {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: var(--espacio-24);
+  }
+  @media (min-width: 480px) {
+    .rejilla-obras,
     .galeria-masonry {
-      column-count: 4;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
-  .galeria-masonry > * {
-    break-inside: avoid;
+  @media (min-width: 1024px) {
+    .rejilla-obras,
+    .galeria-masonry {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1280px) {
+    .rejilla-obras,
+    .galeria-masonry {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
 }
 
-/* Giro del carrusel cilíndrico. Una vuelta larga y lineal; el rotor
-   se pausa desde el componente al pasar el cursor, arrastrar o enfocar. */
+/* ==========================================================
+   Animaciones base (Sección 3.5 y 4.9)
+   ========================================================== */
+@keyframes pulso-esqueleto {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes aparecer-pagina {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes cylinder-ry {
   to {
     transform: rotateY(1turn);
   }
 }
 
+.esqueleto-pulso {
+  background-color: var(--esqueleto);
+  animation: pulso-esqueleto var(--duracion-pulso) var(--curva-base) infinite;
+}
+
+/* 3.5 y 7.2 Con prefers-reduced-motion desaparecen las animaciones y las esperas */
 @media (prefers-reduced-motion: reduce) {
-  .cylinder-rotor {
-    animation: none !important;
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
   }
 }
+
+/* 6.16 Estilos de impresión con fondo blanco y texto negro */
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}
+
