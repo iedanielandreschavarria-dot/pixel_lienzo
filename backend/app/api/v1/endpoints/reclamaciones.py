@@ -42,6 +42,12 @@ def crear_reclamacion(
     if transaccion is None or transaccion.id_comprador != usuario.id_usuario:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No puede reclamar sobre este envío")
 
+    if envio.estado_envio != "Entregado":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo se puede registrar una reclamación sobre un envío en estado 'Entregado'",
+        )
+
     if db.query(Reclamacion).filter(Reclamacion.id_envio == payload.id_envio).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Este envío ya tiene una reclamación")
 
