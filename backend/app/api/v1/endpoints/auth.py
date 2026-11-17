@@ -29,6 +29,9 @@ from app.models.rol import Rol
 from app.models.usuario import Usuario
 from app.schemas.auth import (
     EmailVerificationRequest,
+    GoogleLoginRequest,
+    GoogleRegistroArtista,
+    GoogleRegistroComprador,
     LoginRequest,
     LogoutRequest,
     MfaVerifyRequest,
@@ -49,6 +52,7 @@ from app.services.email_service import (
     enviar_codigo_verificacion_email,
     enviar_enlace_recuperacion,
 )
+from app.services.google_auth_service import verificar_google_id_token
 
 router = APIRouter()
 
@@ -256,3 +260,93 @@ def restablecer_password(payload: PasswordResetRequest, db: Session = Depends(ge
 @router.get("/me", response_model=UsuarioOut)
 def obtener_perfil_actual(usuario: Usuario = Depends(get_current_user)):
     return usuario
+
+
+@router.post("/google/login", response_model=TokenResponse)
+def login_con_google(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
+    """RF 1.1.2 — Inicio de sesión mediante cuenta de Google."""
+    info_google = verificar_google_id_token(payload.credential)
+    correo = info_google["email"]
+
+    usuario = db.query(Usuario).filter(Usuario.correo_electronico == correo).first()
+    if usuario is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No encontramos una cuenta asociada a este correo de Google. Regístrate primero como Coleccionista o Artista.",
+        )
+    if usuario.estado_cuenta != "Activo":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cuenta inhabilitada")
+
+    requiere_mfa = usuario.mfa_activado or usuario.rol.nombre_rol in ROLES_CON_MFA_OBLIGATORIO
+    if requiere_mfa:
+        codigo = otp_service.generar_codigo(otp_service.NS_MFA, usuario.correo_electronico, settings.MFA_CODE_EXPIRE_MINUTES)
+        enviar_codigo_mfa(usuario.correo_electronico, codigo)
+        return TokenResponse(access_token="", refresh_token="", requiere_mfa=True)
+
+    return _emitir_tokens(usuario)
+
+
+@router.post("/google/registro/comprador", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def registrar_comprador_con_google(payload: GoogleRegistroComprador, db: Session = Depends(get_db)):
+    """RF 1.1.2 — Registro ágil de Comprador mediante Google. El correo ya
+    viene verificado por Google, por lo que emite sesión directa."""
+    import secrets
+
+    info_google = verificar_google_id_token(payload.credential)
+    correo = info_google["email"]
+
+    if db.query(Usuario).filter(Usuario.correo_electronico == correo).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El correo ya está registrado")
+
+    rol = _get_rol_or_404(db, ROL_COMPRADOR)
+    nuevo_usuario = Usuario(
+        correo_electronico=correo,
+        contrasenia=hash_password(secrets.token_urlsafe(24)),
+        id_rol=rol.id_rol,
+    )
+    db.add(nuevo_usuario)
+    db.flush()
+
+    for id_categoria in set(payload.categorias_interes):
+        db.add(PreferenciaComprador(id_comprador=nuevo_usuario.id_usuario, id_categoria=id_categoria))
+
+    db.commit()
+    db.refresh(nuevo_usuario)
+    return _emitir_tokens(nuevo_usuario)
+
+
+@router.post("/google/registro/artista", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def registrar_artista_con_google(payload: GoogleRegistroArtista, db: Session = Depends(get_db)):
+    """RF 1.1.2 / 1.1.4 — Registro de Artista usando Google: toma el correo
+    verificado del token de Google y exige los datos básicos del artista
+    (biografía y documento de identidad). La información bancaria se configura
+    posteriormente desde el Panel del Artista."""
+    import secrets
+
+    info_google = verificar_google_id_token(payload.credential)
+    correo = info_google["email"]
+
+    if db.query(Usuario).filter(Usuario.correo_electronico == correo).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El correo ya está registrado")
+
+    rol = _get_rol_or_404(db, ROL_ARTISTA)
+    nuevo_usuario = Usuario(
+        correo_electronico=correo,
+        contrasenia=hash_password(secrets.token_urlsafe(24)),
+        id_rol=rol.id_rol,
+    )
+    db.add(nuevo_usuario)
+    db.flush()
+
+    perfil = PerfilArtista(
+        id_artista=nuevo_usuario.id_usuario,
+        biografia_profesional=payload.biografia_profesional,
+        documento_identidad_url=payload.documento_identidad_url,
+        informacion_bancaria=None,
+        estado_validacion="Pendiente",
+    )
+    db.add(perfil)
+    db.commit()
+    db.refresh(nuevo_usuario)
+    return _emitir_tokens(nuevo_usuario)
+

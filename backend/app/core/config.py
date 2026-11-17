@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     MFA_CODE_EXPIRE_MINUTES: int = 10
     EMAIL_VERIFICATION_EXPIRE_MINUTES: int = 60 * 24
 
+    # Google OAuth2 / Google Identity Services (RF 1.1.2 — Social Login)
+    GOOGLE_CLIENT_ID: str = ""
+
     # Correo saliente (SMTP). Si SMTP_HOST queda vacío, el servicio de correo
     # cae automáticamente a "modo consola" (imprime el mensaje en el log) para
     # poder desarrollar sin depender de un servidor SMTP real.
