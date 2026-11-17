@@ -31,8 +31,8 @@ def _generar_guia_transporte() -> str:
 
 
 def _verificar_acceso(envio: EnvioLogistica, usuario: Usuario, db: Session) -> Transaccion:
-    """El Comprador solo puede ver/gestionar sus propios envíos; Administrador
-    y Curador (logística) pueden acceder a cualquiera."""
+    """El Comprador solo puede ver/gestionar sus propios envíos; el Artista
+    los de sus propias obras (RF 4.2.1); Administrador y Curador cualquiera."""
     transaccion = db.get(Transaccion, envio.id_transaccion)
     rol_usuario = usuario.rol.nombre_rol
     if rol_usuario == ROL_COMPRADOR:
@@ -40,6 +40,10 @@ def _verificar_acceso(envio: EnvioLogistica, usuario: Usuario, db: Session) -> T
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene acceso a este envío")
     elif rol_usuario not in (ROL_ADMINISTRADOR, ROL_CURADOR):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene acceso a este envío")
+    if rol_usuario == ROL_ARTISTA:
+        obra = db.get(ObraArte, transaccion.id_obra) if transaccion else None
+        if obra is None or obra.id_artista != usuario.id_usuario:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene acceso a este envío")
     return transaccion
 
 
@@ -87,10 +91,18 @@ def listar_envios(
     usuario: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Comprador: solo sus envíos. Administrador/Curador: todos (cola de logística)."""
+    """Comprador: solo sus envíos. Artista (RF 4.2.1): envíos de sus obras.
+    Administrador/Curador: todos (cola de logística)."""
     query = db.query(EnvioLogistica)
-    if usuario.rol.nombre_rol == ROL_COMPRADOR:
+    rol_usuario = usuario.rol.nombre_rol
+    if rol_usuario == ROL_COMPRADOR:
         query = query.join(Transaccion).filter(Transaccion.id_comprador == usuario.id_usuario)
+    elif rol_usuario == ROL_ARTISTA:
+        query = (
+            query.join(Transaccion)
+            .join(ObraArte, Transaccion.id_obra == ObraArte.id_obra)
+            .filter(ObraArte.id_artista == usuario.id_usuario)
+        )
     return query.all()
 
 

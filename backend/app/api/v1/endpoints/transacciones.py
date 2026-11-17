@@ -394,6 +394,18 @@ def actualizar_estado_transaccion(
     if transaccion is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transacción no encontrada")
 
+    if payload.estado_pago == "Dispersado":
+        envio = (
+            db.query(EnvioLogistica)
+            .filter(EnvioLogistica.id_transaccion == id_transaccion)
+            .first()
+        )
+        if envio is None or envio.estado_envio != "Entregado":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Solo se pueden dispersar los fondos cuando la obra tenga recepción confirmada ('Entregado') (RF 3.5.1)",
+            )
+
     if payload.estado_pago == "Reembolsado":
         # Misma lógica que dispara una reclamación resuelta como "Devolución
         # Dinero" (ver app/services/pagos_service.py): un solo lugar decide
