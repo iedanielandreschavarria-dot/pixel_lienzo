@@ -1,7 +1,16 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+ESTADOS_PAGO_LITERAL = Literal[
+    "Procesando",
+    "Confirmado",
+    "Dispersado",
+    "Reembolsado",
+    "Rechazado",
+]
 
 
 class TransaccionCreate(BaseModel):
@@ -9,7 +18,7 @@ class TransaccionCreate(BaseModel):
 
 
 class TransaccionEstadoUpdate(BaseModel):
-    estado_pago: str  # Procesando | Confirmado | Dispersado | Reembolsado | Rechazado
+    estado_pago: ESTADOS_PAGO_LITERAL
 
 
 class ComisionUpdate(BaseModel):

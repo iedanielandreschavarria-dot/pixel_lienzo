@@ -228,14 +228,19 @@ export function ArtistaPerfilPage() {
 
             {/* Sección 3: Información bancaria y verificación */}
             <div className="flex flex-col gap-[var(--espacio-16)] border-t border-[color:var(--divisor)] pt-[var(--espacio-24)]">
-              <h2 className="voz-h4 text-[color:var(--tinta)]">Liquidación y documentos</h2>
+              <div>
+                <h2 className="voz-h4 text-[color:var(--tinta)]">Información bancaria y liquidación</h2>
+                <p className="voz-cuerpo-pequeno mt-[var(--espacio-4)] text-[color:var(--tinta-suave)]">
+                  Registra aquí la cuenta bancaria o método donde recibirás la dispersión de fondos de tus obras vendidas.
+                </p>
+              </div>
 
               <Input
                 id="artista-info-bancaria"
                 variante="caja"
-                label="Información bancaria"
-                placeholder="Deja el campo vacío para conservar la cuenta registrada"
-                ayuda="Se almacena cifrada en el servidor y nunca se devuelve al navegador. Escribe un valor nuevo solo si deseas reemplazarla."
+                label="Información bancaria para dispersión de pagos"
+                placeholder="Ej. Banco, tipo de cuenta y número (deja vacío para conservar la actual)"
+                ayuda="Se almacena cifrada con Fernet (AES) en el servidor y nunca se expone en el navegador."
                 autoComplete="off"
                 {...register("informacion_bancaria")}
               />
