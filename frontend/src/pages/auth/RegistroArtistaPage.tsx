@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
-import { registrarArtista } from "../../api/auth";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { registrarArtista, registrarArtistaConGoogle } from "../../api/auth";
 import { subirDocumentoIdentidad } from "../../api/archivos";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { BotonGoogle, type DatosCuentaGoogle } from "../../components/auth/BotonGoogle";
+import { Banner } from "../../components/ui/Banner";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Textarea } from "../../components/ui/Textarea";
@@ -17,15 +20,19 @@ interface FormValues {
   contrasenia: string;
   confirmar: string;
   biografia_profesional: string;
-  informacion_bancaria: string;
   acepta_terminos: boolean;
 }
 
 export function RegistroArtistaPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { guardarSesionDesdeTokens } = useAuth();
   const { notificar } = useToast();
   const [archivo, setArchivo] = useState<File | null>(null);
   const [errorArchivo, setErrorArchivo] = useState<string | undefined>(undefined);
+
+  const estadoInicialGoogle = (location.state as { googleAuth?: DatosCuentaGoogle } | null)?.googleAuth ?? null;
+  const [googleAuth, setGoogleAuth] = useState<DatosCuentaGoogle | null>(estadoInicialGoogle);
 
   useEffect(() => {
     document.title = "Crear cuenta · Pixel & Lienzo";
@@ -44,13 +51,13 @@ export function RegistroArtistaPage() {
   const contrasenia = watch("contrasenia");
 
   const listaErrores = [
-    errors.correo_electronico?.message
+    !googleAuth && errors.correo_electronico?.message
       ? { idCampo: "campo-correo-artista", etiqueta: "Correo", mensaje: errors.correo_electronico.message }
       : null,
-    errors.contrasenia?.message
+    !googleAuth && errors.contrasenia?.message
       ? { idCampo: "campo-clave-artista", etiqueta: "Contraseña", mensaje: errors.contrasenia.message }
       : null,
-    errors.confirmar?.message
+    !googleAuth && errors.confirmar?.message
       ? { idCampo: "campo-confirmar-artista", etiqueta: "Confirmar contraseña", mensaje: errors.confirmar.message }
       : null,
     errorArchivo
@@ -70,11 +77,26 @@ export function RegistroArtistaPage() {
     setErrorArchivo(undefined);
     try {
       const documento_identidad_url = await subirDocumentoIdentidad(archivo);
+
+      if (googleAuth) {
+        const respuesta = await registrarArtistaConGoogle({
+          credential: googleAuth.credential,
+          biografia_profesional: values.biografia_profesional || undefined,
+          documento_identidad_url,
+        });
+        await guardarSesionDesdeTokens(respuesta);
+        notificar(
+          "Cuenta de artista creada con Google. Puedes registrar tu información bancaria dentro de tu perfil en el Panel del Artista.",
+          "exito"
+        );
+        navigate("/artista", { replace: true });
+        return;
+      }
+
       await registrarArtista({
         correo_electronico: values.correo_electronico,
         contrasenia: values.contrasenia,
         biografia_profesional: values.biografia_profesional || undefined,
-        informacion_bancaria: values.informacion_bancaria || undefined,
         documento_identidad_url,
       });
       notificar("Cuenta creada. Un curador revisará tu perfil antes de que puedas publicar obras.", "exito");
@@ -87,73 +109,110 @@ export function RegistroArtistaPage() {
   return (
     <AuthCard titulo="Crear cuenta" subtitulo="Tu lugar en la sala">
       <div className="roles-acceso mb-[var(--espacio-24)]" role="group" aria-label="Tipo de cuenta">
-        <Link to="/registro/comprador" className="rol-acceso">
+        <Link
+          to="/registro/comprador"
+          state={googleAuth ? { googleAuth } : undefined}
+          className="rol-acceso"
+        >
           <span className="rol-acceso__titulo">Coleccionista</span>
           <span className="rol-acceso__detalle">Compra y colecciona obras</span>
         </Link>
-        <Link to="/registro/artista" aria-current="page" className="rol-acceso rol-acceso--activo">
+        <Link
+          to="/registro/artista"
+          state={googleAuth ? { googleAuth } : undefined}
+          aria-current="page"
+          className="rol-acceso rol-acceso--activo"
+        >
           <span className="rol-acceso__titulo">Artista</span>
           <span className="rol-acceso__detalle">Publica y vende tu trabajo</span>
         </Link>
       </div>
 
+      {!googleAuth ? (
+        <div className="mb-[var(--espacio-24)] flex flex-col gap-[var(--espacio-16)]">
+          <BotonGoogle
+            texto="signup_with"
+            etiquetaFallback="Continuar con Google"
+            onSuccess={(datos) => {
+              setGoogleAuth(datos);
+              notificar("Cuenta de Google vinculada. Completa tus datos básicos de artista para continuar.", "exito");
+            }}
+            onError={(msg) => notificar(msg, "error")}
+          />
+          <div className="divisor-riel">
+            <span>o regístrate con tu correo</span>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-[var(--espacio-24)] flex flex-col gap-[var(--espacio-8)]">
+          <Banner variante="informativo">
+            Cuenta de Google conectada{googleAuth.email ? ` (${googleAuth.email})` : ""}. Solo completa tus datos básicos de artista a continuación.
+          </Banner>
+          <button
+            type="button"
+            onClick={() => setGoogleAuth(null)}
+            className="enlace-acceso self-end text-[length:var(--text-cuerpo-pequeno)]"
+          >
+            Usar correo y contraseña en su lugar
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-[var(--espacio-24)]">
         <FormErrorSummary errores={listaErrores.length > 2 ? listaErrores : []} />
 
-        <Input
-          id="campo-correo-artista"
-          variante="subrayado"
-          label="Correo"
-          type="email"
-          autoComplete="email"
-          error={errors.correo_electronico?.message}
-          {...register("correo_electronico", {
-            required: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
-            pattern: {
-              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-              message: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
-            },
-          })}
-        />
+        {!googleAuth && (
+          <>
+            <Input
+              id="campo-correo-artista"
+              variante="subrayado"
+              label="Correo"
+              type="email"
+              autoComplete="email"
+              error={errors.correo_electronico?.message}
+              {...register("correo_electronico", {
+                required: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
+                },
+              })}
+            />
 
-        <Input
-          id="campo-clave-artista"
-          variante="subrayado"
-          label="Contraseña"
-          type="password"
-          autoComplete="new-password"
-          ayuda="Usa al menos 8 caracteres."
-          error={errors.contrasenia?.message}
-          {...register("contrasenia", {
-            required: "Usa al menos 8 caracteres.",
-            minLength: { value: 8, message: "Usa al menos 8 caracteres." },
-          })}
-        />
+            <Input
+              id="campo-clave-artista"
+              variante="subrayado"
+              label="Contraseña"
+              type="password"
+              autoComplete="new-password"
+              ayuda="Usa al menos 8 caracteres."
+              error={errors.contrasenia?.message}
+              {...register("contrasenia", {
+                required: "Usa al menos 8 caracteres.",
+                minLength: { value: 8, message: "Usa al menos 8 caracteres." },
+              })}
+            />
 
-        <Input
-          id="campo-confirmar-artista"
-          variante="subrayado"
-          label="Confirmar contraseña"
-          type="password"
-          autoComplete="new-password"
-          error={errors.confirmar?.message}
-          {...register("confirmar", {
-            required: "Confirma tu contraseña.",
-            validate: (value) => value === contrasenia || "Las contraseñas no coinciden.",
-          })}
-        />
+            <Input
+              id="campo-confirmar-artista"
+              variante="subrayado"
+              label="Confirmar contraseña"
+              type="password"
+              autoComplete="new-password"
+              error={errors.confirmar?.message}
+              {...register("confirmar", {
+                required: "Confirma tu contraseña.",
+                validate: (value) => value === contrasenia || "Las contraseñas no coinciden.",
+              })}
+            />
+          </>
+        )}
 
         <Textarea
           variante="subrayado"
           label="Biografía profesional (opcional)"
           rows={3}
           {...register("biografia_profesional")}
-        />
-
-        <Input
-          variante="subrayado"
-          label="Información bancaria (opcional)"
-          {...register("informacion_bancaria")}
         />
 
         <div id="campo-documento-artista">
@@ -169,6 +228,10 @@ export function RegistroArtistaPage() {
             error={errorArchivo}
           />
         </div>
+
+        <p className="text-[length:var(--text-cuerpo-pequeno)] text-[color:var(--tinta-suave)]">
+          Podrás configurar tu información bancaria para recibir el pago de tus obras directamente desde tu <strong>Panel de Artista</strong>.
+        </p>
 
         <div>
           <label className="flex cursor-pointer items-start gap-[var(--espacio-12)] text-[length:var(--text-cuerpo-pequeno)] text-[color:var(--tinta-suave)]">
@@ -196,7 +259,7 @@ export function RegistroArtistaPage() {
         </div>
 
         <Button type="submit" variante="primario" cargando={isSubmitting} className="w-full">
-          Crear cuenta
+          {googleAuth ? "Completar registro de artista" : "Crear cuenta"}
         </Button>
 
         <div className="divisor-riel">
@@ -212,4 +275,3 @@ export function RegistroArtistaPage() {
     </AuthCard>
   );
 }
-

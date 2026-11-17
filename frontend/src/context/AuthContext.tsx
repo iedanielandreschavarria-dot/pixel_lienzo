@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { jwtDecode } from "jwt-decode";
 import * as authApi from "../api/auth";
 import { tokenStorage } from "../api/client";
-import type { AuthUser, NombreRol } from "../types";
+import type { AuthUser, NombreRol, TokenResponse } from "../types";
 
 interface AccessTokenClaims {
   sub: string;
@@ -16,6 +16,8 @@ interface AuthContextValue {
   user: AuthUser | null;
   cargando: boolean;
   login: (correo: string, contrasenia: string) => Promise<ResultadoLogin>;
+  loginGoogle: (credential: string) => Promise<ResultadoLogin>;
+  guardarSesionDesdeTokens: (respuesta: TokenResponse) => Promise<NombreRol | null>;
   completarMfa: (correo: string, codigo: string) => Promise<NombreRol | null>;
   logout: () => Promise<void>;
   refrescarUsuario: () => Promise<void>;
@@ -61,25 +63,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const guardarSesionDesdeTokens = useCallback(async (respuesta: TokenResponse): Promise<NombreRol | null> => {
+    tokenStorage.setTokens(respuesta.access_token, respuesta.refresh_token);
+    await cargarUsuarioDesdeToken();
+    return decodificarRol(respuesta.access_token);
+  }, [cargarUsuarioDesdeToken]);
+
   const login = useCallback(async (correo: string, contrasenia: string): Promise<ResultadoLogin> => {
     const respuesta = await authApi.login(correo, contrasenia);
     if (respuesta.requiere_mfa) {
       return { requiereMfa: true };
     }
-    tokenStorage.setTokens(respuesta.access_token, respuesta.refresh_token);
-    await cargarUsuarioDesdeToken();
-    // Se devuelve el rol porque el estado `user` todavía no está visible para
-    // quien llamó a `login` en este mismo ciclo de render, y las páginas lo
-    // necesitan para decidir a qué panel redirigir.
-    return { requiereMfa: false, rol: decodificarRol(respuesta.access_token) };
-  }, [cargarUsuarioDesdeToken]);
+    const rol = await guardarSesionDesdeTokens(respuesta);
+    return { requiereMfa: false, rol };
+  }, [guardarSesionDesdeTokens]);
+
+  const loginGoogle = useCallback(async (credential: string): Promise<ResultadoLogin> => {
+    const respuesta = await authApi.loginConGoogle(credential);
+    if (respuesta.requiere_mfa) {
+      return { requiereMfa: true };
+    }
+    const rol = await guardarSesionDesdeTokens(respuesta);
+    return { requiereMfa: false, rol };
+  }, [guardarSesionDesdeTokens]);
 
   const completarMfa = useCallback(async (correo: string, codigo: string) => {
     const respuesta = await authApi.verificarMfa(correo, codigo);
-    tokenStorage.setTokens(respuesta.access_token, respuesta.refresh_token);
-    await cargarUsuarioDesdeToken();
-    return decodificarRol(respuesta.access_token);
-  }, [cargarUsuarioDesdeToken]);
+    return guardarSesionDesdeTokens(respuesta);
+  }, [guardarSesionDesdeTokens]);
 
   const logout = useCallback(async () => {
     try {
@@ -90,8 +101,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, cargando, login, completarMfa, logout, refrescarUsuario: cargarUsuarioDesdeToken }),
-    [user, cargando, login, completarMfa, logout, cargarUsuarioDesdeToken]
+    () => ({
+      user,
+      cargando,
+      login,
+      loginGoogle,
+      guardarSesionDesdeTokens,
+      completarMfa,
+      logout,
+      refrescarUsuario: cargarUsuarioDesdeToken,
+    }),
+    [user, cargando, login, loginGoogle, guardarSesionDesdeTokens, completarMfa, logout, cargarUsuarioDesdeToken]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

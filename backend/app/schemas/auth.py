@@ -52,3 +52,27 @@ class EmailVerificationRequest(BaseModel):
 
 class LogoutRequest(BaseModel):
     refresh_token: str | None = None
+
+
+class GoogleLoginRequest(BaseModel):
+    """Inicio de sesión con Google Identity Services (RF 1.1.2)."""
+
+    credential: str
+
+
+class GoogleRegistroComprador(BaseModel):
+    """Registro de Comprador con Google (el correo proviene del token de Google)."""
+
+    credential: str
+    categorias_interes: list[int] = []
+
+
+class GoogleRegistroArtista(BaseModel):
+    """Registro de Artista con Google: pide únicamente los datos básicos del
+    artista (biografía y documento de identidad), evitando pedir correo,
+    contraseña e información bancaria (la cual se configura en el panel)."""
+
+    credential: str
+    biografia_profesional: str | None = None
+    documento_identidad_url: str
+

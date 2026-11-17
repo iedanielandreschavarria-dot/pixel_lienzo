@@ -1,15 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { registrarComprador } from "../../api/auth";
+import { registrarComprador, registrarCompradorConGoogle } from "../../api/auth";
 import { listarCategorias } from "../../api/categorias";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { BotonGoogle, type DatosCuentaGoogle } from "../../components/auth/BotonGoogle";
+import { Banner } from "../../components/ui/Banner";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { FormErrorSummary, type ErrorCampoItem } from "../../components/ui/FormErrorSummary";
 import { AuthCard } from "./AuthCard";
 import { obtenerMensajeError } from "../../api/client";
+import { rutaInicialPorRol } from "../../lib/navegacion";
 
 interface FormValues {
   correo_electronico: string;
@@ -21,8 +25,13 @@ interface FormValues {
 
 export function RegistroCompradorPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { guardarSesionDesdeTokens } = useAuth();
   const { notificar } = useToast();
   const { data: categorias } = useQuery({ queryKey: ["categorias"], queryFn: listarCategorias });
+
+  const estadoInicialGoogle = (location.state as { googleAuth?: DatosCuentaGoogle } | null)?.googleAuth ?? null;
+  const [googleAuth, setGoogleAuth] = useState<DatosCuentaGoogle | null>(estadoInicialGoogle);
 
   useEffect(() => {
     document.title = "Crear cuenta · Pixel & Lienzo";
@@ -41,13 +50,13 @@ export function RegistroCompradorPage() {
   const contrasenia = watch("contrasenia");
 
   const listaErrores = [
-    errors.correo_electronico?.message
+    !googleAuth && errors.correo_electronico?.message
       ? { idCampo: "campo-correo-comprador", etiqueta: "Correo", mensaje: errors.correo_electronico.message }
       : null,
-    errors.contrasenia?.message
+    !googleAuth && errors.contrasenia?.message
       ? { idCampo: "campo-clave-comprador", etiqueta: "Contraseña", mensaje: errors.contrasenia.message }
       : null,
-    errors.confirmar?.message
+    !googleAuth && errors.confirmar?.message
       ? { idCampo: "campo-confirmar-comprador", etiqueta: "Confirmar contraseña", mensaje: errors.confirmar.message }
       : null,
     errors.acepta_terminos?.message
@@ -56,11 +65,23 @@ export function RegistroCompradorPage() {
   ].filter((item): item is ErrorCampoItem => item !== null);
 
   const onSubmit = async (values: FormValues) => {
+    const categoriasSeleccionadas = (values.categorias_interes ?? []).map(Number);
     try {
+      if (googleAuth) {
+        const respuesta = await registrarCompradorConGoogle({
+          credential: googleAuth.credential,
+          categorias_interes: categoriasSeleccionadas,
+        });
+        const rol = await guardarSesionDesdeTokens(respuesta);
+        notificar("Cuenta creada con Google. Bienvenido a la galería.", "exito");
+        navigate(rutaInicialPorRol(rol), { replace: true });
+        return;
+      }
+
       await registrarComprador({
         correo_electronico: values.correo_electronico,
         contrasenia: values.contrasenia,
-        categorias_interes: (values.categorias_interes ?? []).map(Number),
+        categorias_interes: categoriasSeleccionadas,
       });
       notificar("Cuenta creada. Revisa tu correo para el código de verificación.", "exito");
       navigate("/verificar-email", { state: { correo: values.correo_electronico } });
@@ -72,61 +93,104 @@ export function RegistroCompradorPage() {
   return (
     <AuthCard titulo="Crear cuenta" subtitulo="Tu lugar en la sala">
       <div className="roles-acceso mb-[var(--espacio-24)]" role="group" aria-label="Tipo de cuenta">
-        <Link to="/registro/comprador" aria-current="page" className="rol-acceso rol-acceso--activo">
+        <Link
+          to="/registro/comprador"
+          state={googleAuth ? { googleAuth } : undefined}
+          aria-current="page"
+          className="rol-acceso rol-acceso--activo"
+        >
           <span className="rol-acceso__titulo">Coleccionista</span>
           <span className="rol-acceso__detalle">Compra y colecciona obras</span>
         </Link>
-        <Link to="/registro/artista" className="rol-acceso">
+        <Link
+          to="/registro/artista"
+          state={googleAuth ? { googleAuth } : undefined}
+          className="rol-acceso"
+        >
           <span className="rol-acceso__titulo">Artista</span>
           <span className="rol-acceso__detalle">Publica y vende tu trabajo</span>
         </Link>
       </div>
 
+      {!googleAuth ? (
+        <div className="mb-[var(--espacio-24)] flex flex-col gap-[var(--espacio-16)]">
+          <BotonGoogle
+            texto="signup_with"
+            etiquetaFallback="Registrarse con Google"
+            onSuccess={(datos) => {
+              setGoogleAuth(datos);
+              notificar("Cuenta de Google vinculada. Elige tus categorías y confirma los términos.", "exito");
+            }}
+            onError={(msg) => notificar(msg, "error")}
+          />
+          <div className="divisor-riel">
+            <span>o regístrate con tu correo</span>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-[var(--espacio-24)] flex flex-col gap-[var(--espacio-8)]">
+          <Banner variante="informativo">
+            Registrándote con Google{googleAuth.email ? `: ${googleAuth.email}` : ""}. No necesitas ingresar correo ni contraseña.
+          </Banner>
+          <button
+            type="button"
+            onClick={() => setGoogleAuth(null)}
+            className="enlace-acceso self-end text-[length:var(--text-cuerpo-pequeno)]"
+          >
+            Usar otro método de registro
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-[var(--espacio-24)]">
         <FormErrorSummary errores={listaErrores.length > 2 ? listaErrores : []} />
 
-        <Input
-          id="campo-correo-comprador"
-          variante="subrayado"
-          label="Correo"
-          type="email"
-          autoComplete="email"
-          error={errors.correo_electronico?.message}
-          {...register("correo_electronico", {
-            required: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
-            pattern: {
-              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-              message: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
-            },
-          })}
-        />
+        {!googleAuth && (
+          <>
+            <Input
+              id="campo-correo-comprador"
+              variante="subrayado"
+              label="Correo"
+              type="email"
+              autoComplete="email"
+              error={errors.correo_electronico?.message}
+              {...register("correo_electronico", {
+                required: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: "Ingresa un correo válido, por ejemplo nombre@dominio.com.",
+                },
+              })}
+            />
 
-        <Input
-          id="campo-clave-comprador"
-          variante="subrayado"
-          label="Contraseña"
-          type="password"
-          autoComplete="new-password"
-          ayuda="Usa al menos 8 caracteres."
-          error={errors.contrasenia?.message}
-          {...register("contrasenia", {
-            required: "Usa al menos 8 caracteres.",
-            minLength: { value: 8, message: "Usa al menos 8 caracteres." },
-          })}
-        />
+            <Input
+              id="campo-clave-comprador"
+              variante="subrayado"
+              label="Contraseña"
+              type="password"
+              autoComplete="new-password"
+              ayuda="Usa al menos 8 caracteres."
+              error={errors.contrasenia?.message}
+              {...register("contrasenia", {
+                required: "Usa al menos 8 caracteres.",
+                minLength: { value: 8, message: "Usa al menos 8 caracteres." },
+              })}
+            />
 
-        <Input
-          id="campo-confirmar-comprador"
-          variante="subrayado"
-          label="Confirmar contraseña"
-          type="password"
-          autoComplete="new-password"
-          error={errors.confirmar?.message}
-          {...register("confirmar", {
-            required: "Confirma tu contraseña.",
-            validate: (value) => value === contrasenia || "Las contraseñas no coinciden.",
-          })}
-        />
+            <Input
+              id="campo-confirmar-comprador"
+              variante="subrayado"
+              label="Confirmar contraseña"
+              type="password"
+              autoComplete="new-password"
+              error={errors.confirmar?.message}
+              {...register("confirmar", {
+                required: "Confirma tu contraseña.",
+                validate: (value) => value === contrasenia || "Las contraseñas no coinciden.",
+              })}
+            />
+          </>
+        )}
 
         {categorias && categorias.length > 0 && (
           <fieldset className="border-0 p-0">
@@ -178,7 +242,7 @@ export function RegistroCompradorPage() {
         </div>
 
         <Button type="submit" variante="primario" cargando={isSubmitting} className="w-full">
-          Crear cuenta
+          {googleAuth ? "Completar registro con Google" : "Crear cuenta"}
         </Button>
 
         <div className="divisor-riel">
@@ -194,4 +258,3 @@ export function RegistroCompradorPage() {
     </AuthCard>
   );
 }
-

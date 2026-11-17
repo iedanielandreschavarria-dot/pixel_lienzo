@@ -12,11 +12,40 @@ export interface RegistroArtistaPayload {
   contrasenia: string;
   biografia_profesional?: string;
   documento_identidad_url: string;
-  informacion_bancaria?: string;
+}
+
+export interface GoogleRegistroCompradorPayload {
+  credential: string;
+  categorias_interes: number[];
+}
+
+export interface GoogleRegistroArtistaPayload {
+  credential: string;
+  biografia_profesional?: string;
+  documento_identidad_url: string;
 }
 
 export async function login(correo_electronico: string, contrasenia: string): Promise<TokenResponse> {
   const { data } = await api.post<TokenResponse>("/auth/login", { correo_electronico, contrasenia });
+  return data;
+}
+
+export async function loginConGoogle(credential: string): Promise<TokenResponse> {
+  const { data } = await api.post<TokenResponse>("/auth/google/login", { credential });
+  return data;
+}
+
+export async function registrarCompradorConGoogle(
+  payload: GoogleRegistroCompradorPayload
+): Promise<TokenResponse> {
+  const { data } = await api.post<TokenResponse>("/auth/google/registro/comprador", payload);
+  return data;
+}
+
+export async function registrarArtistaConGoogle(
+  payload: GoogleRegistroArtistaPayload
+): Promise<TokenResponse> {
+  const { data } = await api.post<TokenResponse>("/auth/google/registro/artista", payload);
   return data;
 }
 
