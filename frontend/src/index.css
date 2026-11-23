@@ -24,31 +24,34 @@
    Sección 3 — Fundamentos y Tokens del Kit de Identidad
    ========================================================== */
 :root {
-  /* 3.1 Color [Definido] */
-  --vacio: #000000;
-  --fondo: #0a0808;
-  --tinta: #f2ece3;
-  --tinta-suave: #9a958f;
-  --profundidad: #4d0d0a;
-  --carmesi: #932512;
-  --incandescente: #d4421f;
-  --riel: #e0472b;
-  --aviso: #e8b04a;
-  --exito: #7fb58d;
+  /* 3.1 Color [Piedra Basalto Cálida & Oro Champán Luminoso — Oscuro no sombrío] */
+  --vacio: #24221f;
+  --fondo: #1b1a18;
+  --tinta: #f6f3ec;
+  --tinta-suave: #bdb6ab;
+  --tinta-inversa: #f6f3ec;
+  --profundidad: #2b251f;
+  --carmesi: #8f6b3e;
+  --incandescente: #ab8350;
+  --riel: #d8b888;
+  --aviso: #e6b050;
+  --exito: #7ec291;
+  --peligro: #d96b6b;
 
-  /* Superficies y transparencias derivadas exclusivamente de los tokens */
-  --superficie-elevada: rgba(242, 236, 227, 0.04);
-  --campo-caja-fondo: rgba(242, 236, 227, 0.03);
-  --campo-caja-borde: rgba(242, 236, 227, 0.28);
-  --campo-subrayado-borde: rgba(242, 236, 227, 0.35);
-  --divisor: rgba(242, 236, 227, 0.12);
-  --esqueleto: rgba(242, 236, 227, 0.06);
-  --borde-reposo: rgba(224, 71, 43, 0.4);
-  --borde-hover: rgba(224, 71, 43, 0.8);
-  --borde-terciario: rgba(224, 71, 43, 0.7);
-  --fila-hover: rgba(147, 37, 18, 0.18);
-  --cabecera-fondo: rgba(10, 8, 8, 0.92);
-  --modal-velo: rgba(0, 0, 0, 0.8);
+  /* Superficies y transparencias de galería en piedra cálida */
+  --superficie-elevada: #26231f;
+  --campo-caja-fondo: #23201c;
+  --campo-caja-borde: rgba(216, 184, 136, 0.34);
+  --campo-subrayado-borde: rgba(216, 184, 136, 0.44);
+  --divisor: rgba(246, 243, 236, 0.13);
+  --esqueleto: rgba(246, 243, 236, 0.08);
+  --borde-reposo: rgba(216, 184, 136, 0.38);
+  --borde-hover: rgba(216, 184, 136, 0.85);
+  --borde-terciario: rgba(216, 184, 136, 0.68);
+  --fila-hover: rgba(216, 184, 136, 0.12);
+  --cabecera-fondo: rgba(19, 18, 16, 0.96);
+  --modal-velo: rgba(15, 14, 12, 0.72);
+  --luz-escenario-obra: rgba(216, 184, 136, 0.15);
 
   /* 3.2 Tipografía [Definido] */
   --fuente-titulo: "Playfair Display", "TimesNewRomanMTStd", "Didot", "Bodoni MT", Georgia, serif;
@@ -111,19 +114,21 @@
   --radio-pildora: 999px;
   --radio-circulo: 50%;
 
-  --sombra-tarjeta: 0 18px 50px rgba(0, 0, 0, 0.6);
-  --resplandor-primario: 0 0 30px rgba(190, 30, 20, 0.45);
+  --sombra-tarjeta: 0 16px 42px rgba(10, 9, 8, 0.38);
+  --sombra-modal: 0 24px 64px rgba(10, 9, 8, 0.55);
+  --sombra-iluminacion-roja: 0 10px 30px rgba(216, 184, 136, 0.2);
+  --resplandor-primario: 0 0 26px rgba(216, 184, 136, 0.32);
   --resplandor-disco:
-    inset 0 0 70px 14px var(--vacio),
-    0 0 0 1.5px rgba(230, 70, 50, 0.42),
-    0 0 90px 10px rgba(160, 24, 16, 0.5);
+    inset 0 0 55px 10px rgba(15, 14, 12, 0.55),
+    0 0 0 1.5px rgba(216, 184, 136, 0.62),
+    0 0 85px 10px rgba(216, 184, 136, 0.22);
   --resplandor-disco-hover:
-    inset 0 0 70px 14px var(--vacio),
-    0 0 0 2px rgba(255, 110, 85, 0.7),
-    0 0 110px 16px rgba(190, 30, 20, 0.55);
+    inset 0 0 55px 10px rgba(15, 14, 12, 0.6),
+    0 0 0 2px rgba(235, 206, 160, 0.92),
+    0 0 105px 16px rgba(216, 184, 136, 0.32);
   --resplandor-sello-valido:
-    inset 0 0 40px 8px var(--vacio),
-    0 0 50px 4px rgba(127, 181, 141, 0.35);
+    inset 0 0 32px 6px rgba(15, 14, 12, 0.5),
+    0 0 42px 4px rgba(126, 194, 145, 0.28);
 
   /* 3.5 Movimiento [Definido] */
   --duracion-ruta: 300ms;
@@ -137,10 +142,13 @@
   --curva-base: ease;
   --curva-momento: cubic-bezier(0.65, 0, 0.25, 1);
 
-  /* Medidas de Escena (sección 7.1) */
-  --W: min(96vw, 112vh, 1040px);
+  /* Geometría del catálogo Masonry */
+  --catalog-radius: 10px;
+
+  /* Medidas de Escena (sección 7.1) con scroll natural debajo del header */
+  --W: min(92vw, 96vh, 980px);
   --D: calc(var(--W) * 0.56);
-  --margen-superior: 3vh;
+  --margen-superior: 40px;
   --cy: calc(var(--margen-superior) + var(--W) * 0.54);
   --p: 0;
 
@@ -270,15 +278,15 @@
     font-variant-numeric: lining-nums tabular-nums;
   }
 
-  /* 3.4 y 7.2 Foco visible por teclado: contorno blanco de 2px con separación de 3px */
+  /* 3.4 y 7.2 Foco visible por teclado: contorno terracota de 2px con separación de 3px */
   :focus-visible {
-    outline: 2px solid #ffffff;
+    outline: 2px solid var(--carmesi);
     outline-offset: 3px;
   }
 
   ::selection {
     background-color: var(--carmesi);
-    color: var(--tinta);
+    color: var(--tinta-inversa);
   }
 
   ::-webkit-scrollbar {
@@ -416,30 +424,423 @@
     }
   }
 
-  /* Rejilla de obras 3.3: 1 col <480, 2 col 480-1023, 3 col 1024-1279, 4 col >=1280, gap 24px */
-  .rejilla-obras,
-  .galeria-masonry {
+  /* ==========================================================
+     Catálogo Masonry Grid & Tarjetas de Obra
+     ========================================================== */
+  .catalogo {
+    width: min(calc(100% - 32px), 520px);
+    margin-inline: auto;
+  }
+  @media (min-width: 640px) {
+    .catalogo {
+      width: min(calc(100% - 48px), 1040px);
+      margin-inline: auto;
+    }
+  }
+
+  /* Rejilla estándar uniforme (ej. directorio de artistas) */
+  .rejilla-obras {
     display: grid;
     grid-template-columns: repeat(1, minmax(0, 1fr));
     gap: var(--espacio-24);
   }
-  @media (min-width: 480px) {
-    .rejilla-obras,
-    .galeria-masonry {
+  @media (min-width: 640px) {
+    .rejilla-obras {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
-  @media (min-width: 1024px) {
-    .rejilla-obras,
-    .galeria-masonry {
+  @media (min-width: 960px) {
+    .rejilla-obras {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
   @media (min-width: 1280px) {
-    .rejilla-obras,
-    .galeria-masonry {
+    .rejilla-obras {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+  }
+
+  /* Cuadrícula Masonry con CSS Multi-column (column-count + break-inside: avoid) */
+  .catalogo__masonry,
+  .galeria-masonry {
+    column-count: 1;
+    column-gap: 16px;
+    width: 100%;
+  }
+
+  .obra-card {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 32px;
+    border-radius: var(--catalog-radius);
+    background: transparent;
+  }
+
+  @media (min-width: 640px) {
+    .catalogo__masonry,
+    .galeria-masonry {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    .obra-card {
+      margin-bottom: 20px;
+    }
+  }
+
+  @media (min-width: 960px) {
+    .catalogo__masonry,
+    .galeria-masonry {
+      column-count: 3;
+      column-gap: 24px;
+    }
+    .obra-card {
+      margin-bottom: 24px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .catalogo__masonry,
+    .galeria-masonry {
+      column-count: 4;
+      column-gap: 24px;
+    }
+    .obra-card {
+      margin-bottom: 24px;
+    }
+  }
+
+  /* Disparador interactivo de tarjeta */
+  .obra__trigger {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: var(--catalog-radius);
+  }
+
+  .obra__trigger:focus-visible {
+    outline: 2px solid #e0472b;
+    outline-offset: 6px;
+  }
+
+  /* Contenedor de imagen con puesta en escena en ambiente (reposo) y obra completa al pasar el mouse (hover) */
+  .obra__figure {
+    position: relative;
+    margin: 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--catalog-radius);
+    background-color: #eae6df;
+    box-shadow: 0 10px 28px rgba(10, 9, 8, 0.28);
+    transition:
+      box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .obra__trigger:hover .obra__figure,
+  .obra__trigger:focus-visible .obra__figure {
+    box-shadow: 0 18px 42px rgba(10, 9, 8, 0.44);
+  }
+
+  /* 1. ESCENA DE AMBIENTE EN REPOSO */
+  .obra__ambiente {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    transition:
+      transform 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Variante A: Sala de Galería con luces cenitales y piso de madera */
+  .obra__ambiente--galeria {
+    background:
+      radial-gradient(ellipse 68% 58% at 50% 42%, #faf8f4 0%, #ebe6de 64%, #d5cec3 100%);
+  }
+
+  .obra__galeria-techo {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 11.5%;
+    background: linear-gradient(180deg, #b8b1a6 0%, #d5cfc5 72%, #e5e0d7 100%);
+    border-bottom: 1px solid rgba(120, 112, 100, 0.22);
+    z-index: 2;
+  }
+
+  .obra__galeria-riel {
+    position: absolute;
+    top: 46%;
+    left: 17%;
+    right: 17%;
+    height: 3px;
+    background: #8d877e;
+    border-radius: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  }
+
+  .obra__galeria-foco {
+    position: absolute;
+    top: 2px;
+    width: 10px;
+    height: 13px;
+    border-radius: 3px 3px 5px 5px;
+    background: linear-gradient(180deg, #746e66 0%, #f5efe4 75%, #fffdf7 100%);
+    box-shadow:
+      0 5px 14px 3px rgba(255, 248, 225, 0.85),
+      0 18px 34px 8px rgba(255, 244, 214, 0.38);
+  }
+  .obra__galeria-foco--1 {
+    left: 16%;
+    transform: rotate(14deg);
+  }
+  .obra__galeria-foco--2 {
+    left: 38%;
+    transform: rotate(5deg);
+  }
+  .obra__galeria-foco--3 {
+    left: 60%;
+    transform: rotate(-5deg);
+  }
+  .obra__galeria-foco--4 {
+    left: 82%;
+    transform: rotate(-14deg);
+  }
+
+  .obra__galeria-pared-izq {
+    position: absolute;
+    top: 0;
+    bottom: 14%;
+    left: 0;
+    width: 9.5%;
+    background: linear-gradient(90deg, #bdb6ab 0%, #dad4ca 88%, rgba(205, 198, 188, 0.3) 100%);
+    z-index: 1;
+  }
+
+  .obra__galeria-pared-der {
+    position: absolute;
+    top: 0;
+    bottom: 14%;
+    right: 0;
+    width: 9.5%;
+    background: linear-gradient(270deg, #b8b0a4 0%, #d8d2c8 88%, rgba(205, 198, 188, 0.3) 100%);
+    z-index: 1;
+  }
+
+  .obra__galeria-piso {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 16.5%;
+    z-index: 2;
+    border-top: 2px solid #dfd9cf;
+    background:
+      linear-gradient(180deg, rgba(84, 58, 32, 0.22) 0%, transparent 26%),
+      repeating-linear-gradient(
+        90deg,
+        #b88c5a 0px,
+        #c39866 26px,
+        #ab7f4e 27px,
+        #c89d6c 54px
+      );
+    box-shadow: inset 0 8px 18px rgba(55, 36, 16, 0.22);
+  }
+
+  /* Cuadro en Sala de Galería */
+  .obra__cuadro--galeria {
+    position: absolute;
+    top: 13.5%;
+    left: 17.5%;
+    right: 17.5%;
+    bottom: 20.5%;
+    z-index: 3;
+    padding: 5px;
+    background: #f4efe6;
+    border: 1px solid #d5cec2;
+    box-shadow:
+      0 14px 28px rgba(32, 24, 16, 0.24),
+      0 3px 8px rgba(32, 24, 16, 0.16);
+  }
+
+  /* Variante B: Estudio contemporáneo luminoso con marco negro, paspartú, escritorio y planta */
+  .obra__ambiente--estudio {
+    background:
+      radial-gradient(ellipse 75% 65% at 50% 35%, #f5f4f0 0%, #e7e5df 68%, #d8d5cd 100%);
+  }
+
+  .obra__estudio-lampara {
+    position: absolute;
+    top: -2%;
+    left: 50%;
+    width: 22%;
+    height: 9%;
+    transform: translateX(-50%);
+    border-radius: 0 0 50% 50% / 0 0 38% 38%;
+    background: linear-gradient(90deg, #b8c0b4 0%, #d8ded4 50%, #9fa89b 100%);
+    border-bottom: 3px solid #eef0ec;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+    z-index: 3;
+  }
+
+  .obra__estudio-ventana {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 16.5%;
+    background:
+      linear-gradient(90deg, rgba(64, 72, 60, 0.35) 0%, rgba(45, 48, 42, 0.85) 76%, #2b2d29 76%, #2b2d29 94%, rgba(0, 0, 0, 0.14) 100%);
+    z-index: 1;
+  }
+
+  .obra__estudio-puerta {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 14%;
+    background: linear-gradient(90deg, #e5e3dd 0%, #f2f0ea 30%, #dad7cf 100%);
+    border-left: 2px solid #d2cfc6;
+    z-index: 1;
+  }
+
+  /* Cuadro con marco negro de galería y paspartú marfil en el Estudio */
+  .obra__cuadro--estudio {
+    position: absolute;
+    top: 17%;
+    left: 30%;
+    right: 30%;
+    bottom: 43%;
+    z-index: 3;
+    padding: 6px;
+    background: #1f1b18;
+    box-shadow:
+      0 12px 24px rgba(20, 18, 15, 0.25),
+      0 2px 6px rgba(20, 18, 15, 0.18);
+  }
+
+  .obra__cuadro-paspartu {
+    width: 100%;
+    height: 100%;
+    padding: 11%;
+    background: #ebe6dc;
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.18);
+  }
+
+  .obra__cuadro-lienzo {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #1d1b18;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  }
+
+  .obra__img-cuadro {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 260ms ease;
+  }
+
+  .obra__estudio-mobilario {
+    position: absolute;
+    inset: auto 0 0 0;
+    width: 100%;
+    height: 44%;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  /* 2. CAPA DE OBRA COMPLETA EN HOVER / FOCUS (Imagen 2) */
+  .obra__completa {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    overflow: hidden;
+    border-radius: var(--catalog-radius);
+    background-color: var(--vacio);
+    opacity: 0;
+    transform: scale(0.92);
+    pointer-events: none;
+    transition:
+      opacity 340ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .obra__img-completa-media {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .obra__trigger:hover .obra__completa,
+  .obra__trigger:focus-visible .obra__completa {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .obra__trigger:hover .obra__ambiente,
+  .obra__trigger:focus-visible .obra__ambiente {
+    transform: scale(1.06);
+  }
+
+  /* Ficha técnica debajo de la imagen (idéntica a las capturas de referencia) */
+  .obra__info {
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .obra__titulo {
+    margin: 0;
+    font-family: var(--fuente-texto);
+    font-size: 1.22rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+    color: var(--tinta);
+    text-decoration: none;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1.5px;
+  }
+
+  .obra__trigger:hover .obra__titulo,
+  .obra__trigger:focus-visible .obra__titulo {
+    text-decoration: underline;
+  }
+
+  .obra__artista {
+    margin: 0;
+    margin-top: 2px;
+    font-family: var(--fuente-texto);
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    line-height: 1.35;
+    color: var(--tinta-suave);
+  }
+
+  .obra__precio {
+    margin: 0;
+    margin-top: 6px;
+    font-family: var(--fuente-texto);
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--tinta);
+    font-variant-numeric: lining-nums tabular-nums;
   }
 }
 

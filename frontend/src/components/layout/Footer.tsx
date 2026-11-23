@@ -2,11 +2,7 @@ import { Link } from "react-router-dom";
 import { LogoMarca } from "../ui/LogoMarca";
 
 /**
- * 4.2 Pie de página:
- * Fondo --vacio y borde superior de 1 px en --riel al 40 %. No aparece en el Nivel 3 ni en el Checkout.
- * Tres columnas en escritorio: marca con una frase; Explorar (Obras, Artistas, Estudio Motion);
- * Confianza (Verificar certificado, Términos, Privacidad, Contacto).
- * Línea final: "© 2026 Pixel & Lienzo". El enlace a Verificar certificado es permanente.
+ * Pie de página sincronizado con las nuevas rutas principales.
  */
 export function Footer() {
   return (
@@ -24,18 +20,18 @@ export function Footer() {
 
           <div className="flex flex-col gap-[var(--espacio-12)]">
             <p className="voz-etiqueta text-[color:var(--tinta-suave)]">Explorar</p>
-            <ul className="flex flex-col gap-[var(--espacio-8)] list-none p-0">
+            <ul className="grid grid-cols-2 gap-[var(--espacio-8)] list-none p-0">
               <li>
                 <Link
-                  to="/#coleccion"
+                  to="/sala-palacio-nacional"
                   className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
                 >
-                  Obras
+                  Sala Palacio Nacional
                 </Link>
               </li>
               <li>
                 <Link
-                  to="/#artistas"
+                  to="/artistas"
                   className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
                 >
                   Artistas
@@ -43,18 +39,34 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  to="/estudio"
+                  to="/exposiciones"
                   className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
                 >
-                  Estudio Motion
+                  Exposiciones
                 </Link>
               </li>
               <li>
                 <Link
-                  to="/legal/acerca"
+                  to="/arte"
                   className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
                 >
-                  Acerca de
+                  Arte
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/colecciones"
+                  className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
+                >
+                  Colecciones
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/mas"
+                  className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
+                >
+                  Más
                 </Link>
               </li>
             </ul>
@@ -69,6 +81,14 @@ export function Footer() {
                   className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
                 >
                   Verificar certificado
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/estudio"
+                  className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
+                >
+                  Estudio Motion
                 </Link>
               </li>
               <li>
@@ -108,4 +128,3 @@ export function Footer() {
     </footer>
   );
 }
-

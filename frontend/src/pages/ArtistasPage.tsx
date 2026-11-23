@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Palette, Search } from "lucide-react";
 import clsx from "clsx";
 import { listarCatalogo } from "../api/obras";
 import { obtenerPerfilArtista } from "../api/artistas";
@@ -134,7 +134,7 @@ export function ArtistaPublicoPage({ idArtistaProp }: { idArtistaProp?: number }
       <div className="contenedor-pyl relative z-10 flex flex-col gap-[var(--espacio-32)]">
         <Breadcrumbs
           items={[
-            { etiqueta: "Artistas", to: "/#artistas" },
+            { etiqueta: "Artistas", to: "/artistas" },
             { etiqueta: nombreArtista },
           ]}
         />
@@ -204,9 +204,14 @@ export function ArtistaPublicoPage({ idArtistaProp }: { idArtistaProp?: number }
             )}
 
             {!cargandoObras && !errorObras && obrasPublicadas.length > 0 && (
-              <div className="rejilla-obras">
-                {obrasPublicadas.map((obra) => (
-                  <ObraCard key={obra.id_obra} obra={obra} />
+              <div className="catalogo__masonry" role="list">
+                {obrasPublicadas.map((obra, idx) => (
+                  <ObraCard
+                    key={obra.id_obra}
+                    obra={obra}
+                    nombreArtista={nombreArtista}
+                    prioridad={idx < 4}
+                  />
                 ))}
               </div>
             )}
@@ -317,12 +322,20 @@ export function ArtistasPage() {
       <Ambiente nivel={2} />
 
       <div className="contenedor-pyl relative z-10">
-        {/* Cabecera: H1 "Artistas" con la frase en cursiva "Quienes hacen posible cada obra." */}
-        <header className="mb-[var(--espacio-32)]">
-          <h1 className="voz-h1 text-[color:var(--tinta)]">Artistas</h1>
-          <p className="voz-acento mt-[var(--espacio-8)] text-[color:var(--tinta-suave)]">
-            Quienes hacen posible cada obra.
-          </p>
+        {/* Cabecera: H1 "Artistas" con la frase en cursiva y el botón "Quiero formar parte" */}
+        <header className="mb-[var(--espacio-32)] flex flex-wrap items-end justify-between gap-[var(--espacio-16)]">
+          <div>
+            <h1 className="voz-h1 text-[color:var(--tinta)]">Artistas</h1>
+            <p className="voz-acento mt-[var(--espacio-8)] text-[color:var(--tinta-suave)]">
+              Quienes hacen posible cada obra.
+            </p>
+          </div>
+          <Link to="/artistas/quiero-formar-parte" className="no-underline">
+            <Button variante="primario">
+              <Palette size={18} strokeWidth={1.6} aria-hidden="true" />
+              <span>Quiero formar parte</span>
+            </Button>
+          </Link>
         </header>
 
         {/* Búsqueda y filtro por disciplina */}
@@ -429,7 +442,7 @@ export function ArtistasPage() {
                   nombre={artista.nombre}
                   disciplina={artista.disciplina}
                   obrasPublicadas={artista.obrasPublicadas}
-                  href={`/?perfil_artista=${artista.idArtista}#artistas`}
+                  href={`/artistas/${artista.idArtista}`}
                 />
               ))}
             </div>

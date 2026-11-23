@@ -24,7 +24,7 @@ export function SelloCertificado({
   return (
     <div
       className={clsx(
-        "mx-auto flex h-[var(--sello-diametro)] w-[var(--sello-diametro)] shrink-0 flex-col items-center justify-center gap-[var(--espacio-8)] rounded-[var(--radio-circulo)] border bg-[color:var(--vacio)] p-[var(--espacio-16)] text-center transition-[border-color,box-shadow,opacity] duration-[var(--duracion-momento-min)] ease-[var(--curva-base)]",
+        "mx-auto flex h-[var(--sello-diametro)] w-[var(--sello-diametro)] shrink-0 flex-col items-center justify-center gap-[var(--espacio-8)] rounded-[var(--radio-circulo)] border bg-[#161413] p-[var(--espacio-16)] text-center transition-[border-color,box-shadow,opacity] duration-[var(--duracion-momento-min)] ease-[var(--curva-base)]",
         valido
           ? "border-[color:var(--exito)] shadow-[var(--resplandor-sello-valido)]"
           : "border-[color:var(--riel)] shadow-[var(--resplandor-disco)]",
@@ -34,7 +34,7 @@ export function SelloCertificado({
       <span
         className={clsx(
           "voz-etiqueta",
-          valido ? "text-[color:var(--exito)]" : "text-[color:var(--tinta)]"
+          valido ? "text-[#7fb58d]" : "text-[color:var(--tinta-inversa)]"
         )}
       >
         {etiqueta}
@@ -42,7 +42,7 @@ export function SelloCertificado({
       {codigoCorto && (
         <span
           title={codigo ?? undefined}
-          className="codigo-certificado text-[length:var(--text-minimo)] text-[color:var(--tinta-suave)]"
+          className="codigo-certificado text-[length:var(--text-minimo)] text-[#c9c2b8]"
         >
           {codigoCorto}
         </span>

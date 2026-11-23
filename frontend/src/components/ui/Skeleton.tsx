@@ -2,15 +2,22 @@ import clsx from "clsx";
 
 /**
  * 4.9 Carga:
- * Esqueletos en rgba(242,236,227,.06) con pulso de opacidad de 2.4 s, sin brillo deslizante.
+ * Esqueletos con superficie rgba(242, 236, 227, 0.04) y pulso de opacidad de 2.4 s.
  * En página completa, una línea de 2 px en --riel avanza en el borde superior.
  * Nunca spinners grandes.
  */
-export function Skeleton({ className }: { className?: string }) {
+export function Skeleton({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <div
       aria-hidden="true"
-      className={clsx("esqueleto-pulso rounded-[var(--radio-recto)]", className)}
+      style={style}
+      className={clsx("esqueleto-pulso rounded-[var(--catalog-radius)]", className)}
     />
   );
 }
@@ -26,23 +33,42 @@ export function PageProgressBar({ etiqueta = "Cargando…" }: { etiqueta?: strin
   );
 }
 
+const ASPECTOS_ESQUELETO = [
+  "800 / 1000",
+  "800 / 1066",
+  "800 / 800",
+  "960 / 768",
+  "720 / 1040",
+  "840 / 980",
+] as const;
+
 export function SkeletonCardGrid({ cantidad = 12 }: { cantidad?: number }) {
   return (
-    <div className="rejilla-obras" role="status" aria-label="Cargando obras">
-      {Array.from({ length: cantidad }).map((_, idx) => (
-        <div
-          key={idx}
-          className="flex flex-col border border-[color:var(--divisor)] bg-[color:var(--fondo)]"
-        >
-          <Skeleton className="aspect-[4/5] w-full" />
-          <div className="flex flex-col gap-[var(--espacio-8)] p-[var(--espacio-24)]">
-            <Skeleton className="h-[var(--espacio-24)] w-3/4" />
-            <Skeleton className="h-[var(--espacio-16)] w-1/2" />
-            <Skeleton className="mt-[var(--espacio-8)] h-[var(--espacio-24)] w-1/3" />
+    <div
+      className="catalogo__masonry"
+      role="status"
+      aria-label="Cargando obras"
+    >
+      {Array.from({ length: cantidad }).map((_, idx) => {
+        const aspectRatio = ASPECTOS_ESQUELETO[idx % ASPECTOS_ESQUELETO.length];
+        return (
+          <div key={idx} className="obra-card">
+            <Skeleton
+              className="w-full"
+              style={{
+                aspectRatio,
+                backgroundColor: "rgba(242, 236, 227, 0.04)",
+              }}
+            />
+            <div className="obra__info">
+              <Skeleton className="h-[22px] w-4/5" />
+              <Skeleton className="mt-[6px] h-[16px] w-3/5" />
+              <Skeleton className="mt-[4px] h-[14px] w-2/3" />
+              <Skeleton className="mt-[4px] h-[14px] w-1/3" />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
-

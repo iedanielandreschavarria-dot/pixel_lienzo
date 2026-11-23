@@ -70,13 +70,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
               : "min-h-[var(--alto-control)] py-[var(--espacio-12)]",
           ],
           esTerciario &&
-            "rounded-[var(--radio-recto)] bg-transparent p-0 pb-[var(--espacio-4)] text-[length:var(--text-dato)] text-[color:var(--tinta)] border-b border-[color:var(--borde-terciario)] hover:border-white",
+            "rounded-[var(--radio-recto)] bg-transparent p-0 pb-[var(--espacio-4)] text-[length:var(--text-dato)] text-[color:var(--tinta)] border-b border-[color:var(--borde-terciario)] hover:border-[color:var(--carmesi)] hover:text-[color:var(--carmesi)]",
           tipo === "primario" &&
-            "bg-[color:var(--carmesi)] border border-[color:var(--riel)] text-[color:var(--tinta)] hover:border-white hover:shadow-[var(--resplandor-primario)]",
+            "bg-[color:var(--carmesi)] border border-[color:var(--carmesi)] text-[color:var(--tinta-inversa)] hover:bg-[color:var(--incandescente)] hover:border-[color:var(--incandescente)] hover:shadow-[var(--resplandor-primario)]",
           tipo === "secundario" &&
-            "bg-transparent border border-[color:var(--riel)] text-[color:var(--tinta)] hover:border-white",
+            "bg-transparent border border-[color:var(--riel)] text-[color:var(--tinta)] hover:border-[color:var(--carmesi)] hover:bg-[color:var(--fila-hover)]",
           tipo === "destructivo" &&
-            "bg-transparent border border-[color:var(--aviso)] text-[color:var(--aviso)] hover:border-white",
+            "bg-transparent border border-[color:var(--aviso)] text-[color:var(--aviso)] hover:border-[color:var(--carmesi)]",
           anchoCompleto && "w-full",
           className
         )}

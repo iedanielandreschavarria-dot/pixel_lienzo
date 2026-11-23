@@ -32,7 +32,7 @@ export function Pagination({
         disabled={paginaActual <= 1}
         onClick={() => onChange(paginaActual - 1)}
         aria-label="Página anterior"
-        className="inline-grid h-[var(--area-tactil-min)] w-[var(--area-tactil-min)] place-items-center rounded-[var(--radio-pildora)] border border-[color:var(--riel)] bg-transparent text-[color:var(--tinta)] hover:border-white disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
+        className="inline-grid h-[var(--area-tactil-min)] w-[var(--area-tactil-min)] place-items-center rounded-[var(--radio-pildora)] border border-[color:var(--riel)] bg-transparent text-[color:var(--tinta)] hover:border-[color:var(--carmesi)] disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
       >
         <ChevronLeft size={20} strokeWidth={1.5} aria-hidden="true" />
       </button>
@@ -48,8 +48,8 @@ export function Pagination({
             className={clsx(
               "inline-grid h-[var(--area-tactil-min)] min-w-[var(--area-tactil-min)] place-items-center rounded-[var(--radio-pildora)] border px-[var(--espacio-12)] font-[var(--fuente-texto)] font-semibold text-[length:var(--text-dato)] transition-colors duration-[var(--duracion-hover)] cursor-pointer",
               activa
-                ? "border-[color:var(--riel)] bg-[color:var(--carmesi)] text-[color:var(--tinta)]"
-                : "border-[color:var(--borde-reposo)] bg-transparent text-[color:var(--tinta-suave)] hover:border-white hover:text-[color:var(--tinta)]"
+                ? "border-[color:var(--carmesi)] bg-[color:var(--carmesi)] text-[color:var(--tinta-inversa)]"
+                : "border-[color:var(--borde-reposo)] bg-transparent text-[color:var(--tinta-suave)] hover:border-[color:var(--carmesi)] hover:text-[color:var(--tinta)]"
             )}
           >
             {num}
@@ -62,7 +62,7 @@ export function Pagination({
         disabled={paginaActual >= totalPaginas}
         onClick={() => onChange(paginaActual + 1)}
         aria-label="Página siguiente"
-        className="inline-grid h-[var(--area-tactil-min)] w-[var(--area-tactil-min)] place-items-center rounded-[var(--radio-pildora)] border border-[color:var(--riel)] bg-transparent text-[color:var(--tinta)] hover:border-white disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
+        className="inline-grid h-[var(--area-tactil-min)] w-[var(--area-tactil-min)] place-items-center rounded-[var(--radio-pildora)] border border-[color:var(--riel)] bg-transparent text-[color:var(--tinta)] hover:border-[color:var(--carmesi)] disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
       >
         <ChevronRight size={20} strokeWidth={1.5} aria-hidden="true" />
       </button>

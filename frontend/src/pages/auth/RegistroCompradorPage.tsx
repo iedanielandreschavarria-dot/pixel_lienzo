@@ -92,26 +92,6 @@ export function RegistroCompradorPage() {
 
   return (
     <AuthCard titulo="Crear cuenta" subtitulo="Tu lugar en la sala">
-      <div className="roles-acceso mb-[var(--espacio-24)]" role="group" aria-label="Tipo de cuenta">
-        <Link
-          to="/registro/comprador"
-          state={googleAuth ? { googleAuth } : undefined}
-          aria-current="page"
-          className="rol-acceso rol-acceso--activo"
-        >
-          <span className="rol-acceso__titulo">Coleccionista</span>
-          <span className="rol-acceso__detalle">Compra y colecciona obras</span>
-        </Link>
-        <Link
-          to="/registro/artista"
-          state={googleAuth ? { googleAuth } : undefined}
-          className="rol-acceso"
-        >
-          <span className="rol-acceso__titulo">Artista</span>
-          <span className="rol-acceso__detalle">Publica y vende tu trabajo</span>
-        </Link>
-      </div>
-
       {!googleAuth ? (
         <div className="mb-[var(--espacio-24)] flex flex-col gap-[var(--espacio-16)]">
           <BotonGoogle

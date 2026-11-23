@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { listarCatalogo } from "../api/obras";
 import { listarCategorias } from "../api/categorias";
 import { formatearMoneda } from "../lib/formato";
-import { ObraCard } from "../components/ObraCard";
+import {
+  ObraCard,
+  coincideParametroObra,
+  obtenerSlugObra,
+} from "../components/ObraCard";
+import { OBRAS_MUESTRA_PALACIO } from "../lib/obrasMuestraPalacio";
+import { ObraLightbox } from "../components/catalogo/ObraLightbox";
 import { Ambiente } from "../components/escena/Ambiente";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -17,6 +23,7 @@ import { Pagination } from "../components/ui/Pagination";
 import { ArtistasPage } from "./ArtistasPage";
 import { CuentaPage } from "./CuentaPage";
 import { InicioPage } from "./InicioPage";
+import type { Obra } from "../types";
 
 type OrdenCatalogo = "recientes" | "precio_menor" | "precio_mayor" | "titulo_az";
 type FiltroDisponibilidad = "todas" | "disponibles" | "vendidas";
@@ -41,14 +48,20 @@ export function CatalogoPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [modalFiltrosMovil, setModalFiltrosMovil] = useState(false);
+  const [filtrosAbiertosEscritorio, setFiltrosAbiertosEscritorio] = useState(false);
+  const triggerLightboxRef = useRef<HTMLElement | null>(null);
 
+  const enRutaArte = location.pathname === "/arte" || location.pathname.startsWith("/arte/");
   const enVistaCuenta = searchParams.get("vista") === "cuenta";
   const enVistaArtistas =
-    !enVistaCuenta && (location.hash === "#artistas" || searchParams.has("perfil_artista"));
-  const enVistaCatalogo =
+    !enRutaArte &&
     !enVistaCuenta &&
-    !enVistaArtistas &&
-    (location.hash === "#coleccion" || location.search.length > 0);
+    (location.hash === "#artistas" || searchParams.has("perfil_artista"));
+  const enVistaCatalogo =
+    enRutaArte ||
+    (!enVistaCuenta &&
+      !enVistaArtistas &&
+      (location.hash === "#coleccion" || location.search.length > 0));
 
   // Parámetros sincronizados con la URL
   const busqueda = searchParams.get("q") ?? "";
@@ -60,6 +73,7 @@ export function CatalogoPage() {
   const disponibilidad = (searchParams.get("disponibilidad") as FiltroDisponibilidad | null) ?? "todas";
   const orden = (searchParams.get("orden") as OrdenCatalogo | null) ?? "recientes";
   const paginaActual = Math.max(1, Number(searchParams.get("pagina") ?? "1") || 1);
+  const obraParam = searchParams.get("obra");
 
   const actualizarParametros = useCallback(
     (cambios: Record<string, string | null>, resetearPagina = true) => {
@@ -127,7 +141,7 @@ export function CatalogoPage() {
   });
 
   const {
-    data: obrasBase,
+    data: obrasApi,
     isLoading,
     isError,
     refetch,
@@ -135,7 +149,16 @@ export function CatalogoPage() {
     queryKey: ["catalogo", filtrosApi],
     queryFn: () => listarCatalogo(filtrosApi),
     enabled: enVistaCatalogo,
+    retry: 1,
   });
+
+  // Si el backend aún no tiene obras publicadas o no está activo, mostramos el catálogo curatorial del Palacio Nacional
+  const obrasBase = useMemo<Obra[]>(() => {
+    if (obrasApi && obrasApi.length > 0) {
+      return obrasApi;
+    }
+    return [...OBRAS_MUESTRA_PALACIO];
+  }, [obrasApi]);
 
   // Lista de técnicas disponibles en las obras cargadas
   const tecnicasDisponibles = useMemo(() => {
@@ -270,6 +293,87 @@ export function CatalogoPage() {
     return obrasFiltradas.slice(inicio, inicio + POR_PAGINA);
   }, [obrasFiltradas, paginaSegura]);
 
+  // Lista navegable en Lightbox y resolución de obra activa desde ?obra=<slug>
+  const listaLightbox = useMemo(() => {
+    if (obrasFiltradas.length > 0) return obrasFiltradas;
+    return obrasBase ?? [];
+  }, [obrasFiltradas, obrasBase]);
+
+  const indiceObraLightbox = useMemo(() => {
+    if (!obraParam) return -1;
+    const idxEnLista = listaLightbox.findIndex((o) => coincideParametroObra(o, obraParam));
+    if (idxEnLista >= 0) return idxEnLista;
+    return (obrasBase ?? []).findIndex((o) => coincideParametroObra(o, obraParam));
+  }, [obraParam, listaLightbox, obrasBase]);
+
+  const obraLightboxActiva: Obra | null = useMemo(() => {
+    if (!obraParam) return null;
+    const enLista = listaLightbox.find((o) => coincideParametroObra(o, obraParam));
+    if (enLista) return enLista;
+    return (obrasBase ?? []).find((o) => coincideParametroObra(o, obraParam)) ?? null;
+  }, [obraParam, listaLightbox, obrasBase]);
+
+  const abrirLightboxObra = useCallback(
+    (obra: Obra, triggerEl: HTMLElement) => {
+      triggerLightboxRef.current = triggerEl;
+      const siguientes = new URLSearchParams(searchParams);
+      siguientes.set("obra", obtenerSlugObra(obra));
+      navigate(
+        {
+          pathname: location.pathname,
+          search: `?${siguientes.toString()}`,
+          hash: enRutaArte ? "" : location.hash || "#coleccion",
+        },
+        { replace: false }
+      );
+    },
+    [searchParams, navigate, location.pathname, location.hash, enRutaArte]
+  );
+
+  const cerrarLightbox = useCallback(() => {
+    const siguientes = new URLSearchParams(searchParams);
+    siguientes.delete("obra");
+    const searchStr = siguientes.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: searchStr ? `?${searchStr}` : "",
+        hash: enRutaArte ? "" : "#coleccion",
+      },
+      { replace: true }
+    );
+  }, [searchParams, navigate, location.pathname, enRutaArte]);
+
+  const irObraAnteriorLightbox = useCallback(() => {
+    const coleccion = listaLightbox.length > 0 ? listaLightbox : (obrasBase ?? []);
+    if (coleccion.length <= 1) return;
+    const actualIdx = Math.max(
+      0,
+      coleccion.findIndex((o) => o.id_obra === obraLightboxActiva?.id_obra)
+    );
+    const prevIdx = (actualIdx - 1 + coleccion.length) % coleccion.length;
+    const prevObra = coleccion[prevIdx];
+    if (!prevObra) return;
+    const siguientes = new URLSearchParams(searchParams);
+    siguientes.set("obra", obtenerSlugObra(prevObra));
+    setSearchParams(siguientes, { replace: true });
+  }, [listaLightbox, obrasBase, obraLightboxActiva, searchParams, setSearchParams]);
+
+  const irObraSiguienteLightbox = useCallback(() => {
+    const coleccion = listaLightbox.length > 0 ? listaLightbox : (obrasBase ?? []);
+    if (coleccion.length <= 1) return;
+    const actualIdx = Math.max(
+      0,
+      coleccion.findIndex((o) => o.id_obra === obraLightboxActiva?.id_obra)
+    );
+    const nextIdx = (actualIdx + 1) % coleccion.length;
+    const nextObra = coleccion[nextIdx];
+    if (!nextObra) return;
+    const siguientes = new URLSearchParams(searchParams);
+    siguientes.set("obra", obtenerSlugObra(nextObra));
+    setSearchParams(siguientes, { replace: true });
+  }, [listaLightbox, obrasBase, obraLightboxActiva, searchParams, setSearchParams]);
+
   if (enVistaCuenta) {
     return <CuentaPage />;
   }
@@ -283,7 +387,7 @@ export function CatalogoPage() {
       <InicioPage
         onExplorarCatalogo={() => {
           window.scrollTo({ top: 0, behavior: "auto" });
-          navigate("/#coleccion");
+          navigate("/arte");
         }}
       />
     );
@@ -367,13 +471,22 @@ export function CatalogoPage() {
   );
 
   return (
-    <div id="coleccion" className="relative min-h-screen py-[var(--espacio-48)]">
+    <section
+      id="coleccion"
+      aria-labelledby="catalogo-titulo"
+      className="relative min-h-screen py-[var(--espacio-48)] animate-[aparecer-pagina_500ms_ease_forwards]"
+    >
       <Ambiente nivel={1} />
 
-      <div className="contenedor-pyl relative z-10">
-        {/* Cabecera de página: H1 "Obras" con riel de 64 px por 2 px en --riel debajo */}
+      <div className="catalogo relative z-10">
+        {/* Cabecera de sección: H1 "Obras" con riel de 64 px por 2 px en --riel debajo */}
         <header className="mb-[var(--espacio-32)]">
-          <h1 className="voz-h1 text-[color:var(--tinta)]">Obras</h1>
+          <p className="voz-etiqueta mb-2 text-[color:var(--tinta-suave)]">
+            Colección curatorial verificada
+          </p>
+          <h1 id="catalogo-titulo" className="voz-h1 text-[color:var(--tinta)]">
+            Obras
+          </h1>
           <div
             aria-hidden="true"
             className="mt-[var(--espacio-12)] h-[2px] w-[var(--espacio-64)] bg-[color:var(--riel)]"
@@ -383,7 +496,7 @@ export function CatalogoPage() {
         {/* Barra de herramientas: búsqueda, botón "Filtros", orden y contador */}
         <div className="mb-[var(--espacio-24)] flex flex-wrap items-end justify-between gap-[var(--espacio-16)] border-b border-[color:var(--divisor)] pb-[var(--espacio-24)]">
           <div className="flex flex-1 flex-wrap items-end gap-[var(--espacio-16)]">
-            <div className="relative min-w-[min(280px,100%)] flex-1 max-w-[var(--contenedor-formulario)]">
+            <div className="relative min-w-[min(260px,100%)] flex-1 max-w-[var(--contenedor-formulario)]">
               <Input
                 variante="caja"
                 label="Buscar obra"
@@ -401,20 +514,32 @@ export function CatalogoPage() {
               />
             </div>
 
-            <div className="min-[1024px]:hidden">
+            <div className="min-[960px]:hidden">
               <Button
                 type="button"
                 variante="secundario"
                 onClick={() => setModalFiltrosMovil(true)}
               >
-                <SlidersHorizontal size={20} strokeWidth={1.5} aria-hidden="true" />
-                <span>Filtros</span>
+                <SlidersHorizontal size={18} strokeWidth={1.5} aria-hidden="true" />
+                <span>Filtros{chipsActivos.length > 0 ? ` (${chipsActivos.length})` : ""}</span>
+              </Button>
+            </div>
+
+            <div className="hidden min-[960px]:block">
+              <Button
+                type="button"
+                variante="secundario"
+                aria-expanded={filtrosAbiertosEscritorio}
+                onClick={() => setFiltrosAbiertosEscritorio((prev) => !prev)}
+              >
+                <SlidersHorizontal size={18} strokeWidth={1.5} aria-hidden="true" />
+                <span>Filtros{chipsActivos.length > 0 ? ` (${chipsActivos.length})` : ""}</span>
               </Button>
             </div>
           </div>
 
           <div className="flex flex-wrap items-end gap-[var(--espacio-24)]">
-            <div className="min-w-[220px]">
+            <div className="min-w-[210px]">
               <Select
                 label="Ordenar por"
                 value={orden}
@@ -437,6 +562,29 @@ export function CatalogoPage() {
             </p>
           </div>
         </div>
+
+        {/* Panel desplegable de filtros en escritorio (preserva el ancho completo 1040px para las 4 columnas Masonry) */}
+        {filtrosAbiertosEscritorio && (
+          <aside
+            aria-label="Filtros del catálogo"
+            className="mb-[var(--espacio-24)] hidden border border-[color:var(--divisor)] bg-[rgba(242,236,227,0.02)] p-[var(--espacio-24)] min-[960px]:block"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="voz-etiqueta text-[color:var(--tinta-suave)]">
+                Filtrar colección
+              </h2>
+              <button
+                type="button"
+                onClick={() => setFiltrosAbiertosEscritorio(false)}
+                aria-label="Ocultar panel de filtros"
+                className="text-[color:var(--tinta-suave)] hover:text-[color:var(--tinta)] cursor-pointer"
+              >
+                <X size={18} strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            </div>
+            {renderControlesFiltro("escritorio")}
+          </aside>
+        )}
 
         {/* Chips de filtros aplicados con "×" y "Limpiar filtros" */}
         {chipsActivos.length > 0 && (
@@ -469,70 +617,70 @@ export function CatalogoPage() {
           </div>
         )}
 
-        {/* Cuerpo: filtros laterales fijos de 280 px en escritorio + rejilla de obras */}
-        <div className="grid grid-cols-1 gap-[var(--espacio-32)] min-[1024px]:grid-cols-[var(--ancho-filtros-catalogo)_minmax(0,1fr)]">
-          <aside
-            aria-label="Filtros del catálogo"
-            className="hidden self-start border-r border-[color:var(--divisor)] pr-[var(--espacio-24)] min-[1024px]:block"
-          >
-            <h2 className="voz-etiqueta mb-[var(--espacio-16)] text-[color:var(--tinta-suave)]">
-              Filtros
-            </h2>
-            {renderControlesFiltro("escritorio")}
-          </aside>
+        {/* Cuadrícula de obras del catálogo */}
+        <div>
+          {isLoading && <SkeletonCardGrid cantidad={8} />}
 
-          <div>
-            {isLoading && <SkeletonCardGrid cantidad={12} />}
+          {!isLoading && obrasFiltradas.length === 0 && hayFiltrosActivos && (
+            <EmptyState
+              titulo="Ninguna obra coincide con tu búsqueda."
+              accion={
+                <Button variante="secundario" onClick={limpiarFiltros}>
+                  Limpiar filtros
+                </Button>
+              }
+            />
+          )}
 
-            {!isLoading && isError && (
-              <SectionError
-                recurso="las obras"
-                onReintentar={() => {
-                  void refetch();
+          {!isLoading && obrasFiltradas.length === 0 && !hayFiltrosActivos && isError && (
+            <SectionError
+              recurso="las obras"
+              onReintentar={() => {
+                void refetch();
+              }}
+            />
+          )}
+
+          {!isLoading && obrasPaginadas.length > 0 && (
+            <>
+              <div className="catalogo__masonry" role="list">
+                {obrasPaginadas.map((obra, idx) => (
+                  <ObraCard
+                    key={obra.id_obra}
+                    obra={obra}
+                    prioridad={idx < 4}
+                    onSelect={abrirLightboxObra}
+                  />
+                ))}
+              </div>
+
+              <Pagination
+                paginaActual={paginaSegura}
+                totalPaginas={totalPaginas}
+                onChange={(nuevaPagina) => {
+                  actualizarParametros(
+                    { pagina: nuevaPagina > 1 ? String(nuevaPagina) : null },
+                    false
+                  );
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
+                className="mt-[var(--espacio-48)]"
               />
-            )}
-
-            {!isLoading && !isError && obrasFiltradas.length === 0 && hayFiltrosActivos && (
-              <EmptyState
-                titulo="Ninguna obra coincide con tu búsqueda."
-                accion={
-                  <Button variante="secundario" onClick={limpiarFiltros}>
-                    Limpiar filtros
-                  </Button>
-                }
-              />
-            )}
-
-            {!isLoading && !isError && obrasFiltradas.length === 0 && !hayFiltrosActivos && (
-              <EmptyState titulo="Aún no hay obras publicadas." />
-            )}
-
-            {!isLoading && !isError && obrasPaginadas.length > 0 && (
-              <>
-                <div className="rejilla-obras">
-                  {obrasPaginadas.map((obra) => (
-                    <ObraCard key={obra.id_obra} obra={obra} />
-                  ))}
-                </div>
-
-                <Pagination
-                  paginaActual={paginaSegura}
-                  totalPaginas={totalPaginas}
-                  onChange={(nuevaPagina) => {
-                    actualizarParametros(
-                      { pagina: nuevaPagina > 1 ? String(nuevaPagina) : null },
-                      false
-                    );
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className="mt-[var(--espacio-48)]"
-                />
-              </>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Lightbox interactivo sincronizado con ?obra=<slug> */}
+      <ObraLightbox
+        obra={obraLightboxActiva}
+        indiceActual={Math.max(0, indiceObraLightbox)}
+        totalObras={listaLightbox.length || (obrasBase?.length ?? 0)}
+        onClose={cerrarLightbox}
+        onPrev={irObraAnteriorLightbox}
+        onNext={irObraSiguienteLightbox}
+        triggerRef={triggerLightboxRef}
+      />
 
       {/* Modal de pantalla completa para filtros en móvil */}
       {modalFiltrosMovil && (
@@ -540,7 +688,7 @@ export function CatalogoPage() {
           role="dialog"
           aria-modal="true"
           aria-label="Filtros"
-          className="fixed inset-0 z-50 flex flex-col bg-[color:var(--fondo)] p-[var(--espacio-24)] min-[1024px]:hidden"
+          className="fixed inset-0 z-50 flex flex-col bg-[color:var(--fondo)] p-[var(--espacio-24)] min-[960px]:hidden"
         >
           <div className="flex items-center justify-between border-b border-[color:var(--divisor)] pb-[var(--espacio-16)]">
             <h2 className="voz-h3 text-[color:var(--tinta)]">Filtros</h2>
@@ -570,6 +718,6 @@ export function CatalogoPage() {
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

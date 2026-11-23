@@ -1,17 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Maximize2, QrCode, ShieldCheck, X } from "lucide-react";
+import { FileText, Maximize2, QrCode, ShieldCheck, ShoppingBag, X } from "lucide-react";
 import clsx from "clsx";
-import { listarCatalogo, obtenerObra, obtenerObraPorUid, urlPreviewObra, urlQrObra } from "../api/obras";
+import { listarCatalogo, obtenerObra, obtenerObraPorUid, urlQrObra } from "../api/obras";
 import { obtenerPerfilArtista } from "../api/artistas";
 import { obtenerCertificado, urlQrCertificado } from "../api/certificados";
 import { obtenerTrazabilidad } from "../api/trazabilidad";
 import { crearTransaccion } from "../api/transacciones";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 import { useToast } from "../context/ToastContext";
 import { Ambiente } from "../components/escena/Ambiente";
 import { ObraCard } from "../components/ObraCard";
+import {
+  OBRAS_MUESTRA_PALACIO,
+  esObraMuestraLocal,
+  resolverNombreArtistaObra,
+  resolverUrlImagenObra,
+} from "../lib/obrasMuestraPalacio";
 import { LineaTrazabilidad } from "../components/LineaTrazabilidad";
 import { Button } from "../components/ui/Button";
 import { BadgeEstadoObra } from "../components/ui/Badge";
@@ -39,6 +46,7 @@ export function ObraDetallePage() {
   const { idObra } = useParams<{ idObra: string }>();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { agregarObra, abrirCarrito, estaEnCarrito } = useCart();
   const { notificar } = useToast();
   const navigate = useNavigate();
 
@@ -50,21 +58,33 @@ export function ObraDetallePage() {
   const [visorAbierto, setVisorAbierto] = useState(false);
   const [zoomVisor, setZoomVisor] = useState(false);
   const [mostrarBarraMovil, setMostrarBarraMovil] = useState(false);
+  const [fallbackImagenFamosa, setFallbackImagenFamosa] = useState(false);
 
   const bloqueCompraRef = useRef<HTMLDivElement>(null);
   const botonAmpliarRef = useRef<HTMLButtonElement>(null);
 
   const esIdNumerico = /^\d+$/.test(idObra ?? "");
 
+  const obraMuestraFallback = useMemo(() => {
+    if (!idObra) return undefined;
+    if (esIdNumerico) {
+      return OBRAS_MUESTRA_PALACIO.find((o) => o.id_obra === Number(idObra));
+    }
+    return OBRAS_MUESTRA_PALACIO.find((o) => o.uid.toLowerCase() === idObra.toLowerCase());
+  }, [idObra, esIdNumerico]);
+
   const {
-    data: obra,
+    data: obraApi,
     isLoading,
     isError,
   } = useQuery({
     queryKey: esIdNumerico ? ["obra", Number(idObra)] : ["obra-uid", idObra],
     queryFn: () => (esIdNumerico ? obtenerObra(Number(idObra)) : obtenerObraPorUid(idObra!)),
-    enabled: !!idObra,
+    enabled: !!idObra && !obraMuestraFallback,
+    retry: 1,
   });
+
+  const obra = obraApi ?? obraMuestraFallback;
 
   const { data: perfilArtista } = useQuery({
     queryKey: ["artista", obra?.id_artista],
@@ -100,6 +120,7 @@ export function ObraDetallePage() {
   useEffect(() => {
     setLuzEncendida(false);
     setVistaActiva("obra");
+    setFallbackImagenFamosa(false);
     const timer = window.setTimeout(() => setLuzEncendida(true), 40);
     return () => window.clearTimeout(timer);
   }, [obra?.id_obra]);
@@ -158,7 +179,10 @@ export function ObraDetallePage() {
     );
   }
 
-  if (isError || !obra) {
+  if ((isError || !obra) && !obraMuestraFallback) {
+    return <NotFoundPage />;
+  }
+  if (!obra) {
     return <NotFoundPage />;
   }
 
@@ -202,10 +226,11 @@ export function ObraDetallePage() {
     }
   };
 
-  const urlImagenPrincipal = urlPreviewObra(obra.id_obra);
+  const esMuestraLocal = esObraMuestraLocal(obra);
+  const urlImagenPrincipal = resolverUrlImagenObra(obra, esMuestraLocal || fallbackImagenFamosa);
   const urlImagenActiva =
     vistaActiva === "qr" && obra.codigo_qr_obra ? urlQrObra(obra.id_obra) : urlImagenPrincipal;
-  const nombreArtista = `Artista N.º ${obra.id_artista}`;
+  const nombreArtista = resolverNombreArtistaObra(obra);
 
   return (
     <div className="relative min-h-screen pb-[calc(var(--alto-barra-compra-movil)+var(--espacio-48))] pt-[var(--espacio-32)] min-[1024px]:pb-[var(--espacio-96)]">
@@ -242,6 +267,9 @@ export function ObraDetallePage() {
                 src={urlImagenActiva}
                 alt={vistaActiva === "qr" ? `Código QR de ${obra.titulo}` : obra.titulo}
                 decoding="async"
+                onError={() => {
+                  if (!fallbackImagenFamosa) setFallbackImagenFamosa(true);
+                }}
                 className="relative z-10 max-h-[80vh] w-full object-contain"
               />
             </div>
@@ -363,7 +391,7 @@ export function ObraDetallePage() {
                   </Button>
                   <div className="text-center">
                     <Link
-                      to={`/#coleccion?categoria=${obra.id_categoria}`}
+                      to={`/arte?categoria=${obra.id_categoria}`}
                       className="enlace-acceso text-[length:var(--text-cuerpo-pequeno)]"
                     >
                       Ver obras similares
@@ -371,16 +399,36 @@ export function ObraDetallePage() {
                   </div>
                 </>
               ) : (
-                <Button
-                  type="button"
-                  variante="primario"
-                  disabled={!disponible}
-                  cargando={comprando}
-                  onClick={comprar}
-                  className="w-full"
-                >
-                  Comprar obra
-                </Button>
+                <div className="flex flex-col gap-[var(--espacio-12)] sm:flex-row">
+                  <Button
+                    type="button"
+                    variante="primario"
+                    disabled={!disponible}
+                    cargando={comprando}
+                    onClick={comprar}
+                    className="flex-1"
+                  >
+                    Comprar obra
+                  </Button>
+                  <Button
+                    type="button"
+                    variante="secundario"
+                    disabled={!disponible}
+                    onClick={() => {
+                      if (estaEnCarrito(obra.id_obra)) {
+                        abrirCarrito();
+                      } else {
+                        agregarObra(obra);
+                        notificar("Obra agregada al carrito de compra", "exito");
+                        abrirCarrito();
+                      }
+                    }}
+                    className="flex-1"
+                  >
+                    <ShoppingBag size={18} strokeWidth={1.6} aria-hidden="true" />
+                    <span>{estaEnCarrito(obra.id_obra) ? "En el carrito" : "Agregar al carrito"}</span>
+                  </Button>
+                </div>
               )}
             </div>
 

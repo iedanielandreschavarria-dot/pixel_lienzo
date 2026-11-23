@@ -53,7 +53,7 @@ const ESTILOS_GUIA: Record<EstadoGuia, ConfigEstado> = {
   Vendida: {
     etiqueta: "Vendida",
     icono: ShoppingBag,
-    clases: "border-[color:var(--riel)] bg-[color:var(--carmesi)] text-[color:var(--tinta)]",
+    clases: "border-[color:var(--carmesi)] bg-[color:var(--carmesi)] text-[color:var(--tinta-inversa)]",
   },
   Retirada: {
     etiqueta: "Retirada",
