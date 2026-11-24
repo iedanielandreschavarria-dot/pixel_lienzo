@@ -1,6 +1,6 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronDown, Menu, Search, ShoppingBag, Trash2, User, X } from "lucide-react";
+import { ChevronDown, LayoutDashboard, Menu, Search, ShoppingBag, Trash2, User, X } from "lucide-react";
 import clsx from "clsx";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
@@ -78,11 +78,6 @@ export const ENLACES_PRINCIPALES: EnlacePrincipalMenu[] = [
         etiqueta: "Próximas exposiciones",
         detalle: "Calendario curatorial y aperturas",
       },
-      {
-        to: "/estudio",
-        etiqueta: "Estudio Motion",
-        detalle: "Proyección 16:9 de obras en movimiento",
-      },
     ],
   },
   {
@@ -114,16 +109,6 @@ export const ENLACES_PRINCIPALES: EnlacePrincipalMenu[] = [
         to: "/colecciones",
         etiqueta: "Fondos y categorías",
         detalle: "Explorar por línea curatorial y técnica",
-      },
-      {
-        to: "/sala-palacio-nacional",
-        etiqueta: "Acervo Palacio Nacional",
-        detalle: "Selección patrimonial en sede principal",
-      },
-      {
-        to: "/estudio",
-        etiqueta: "Colección Motion",
-        detalle: "Videoarte y arte generativo en sala",
       },
     ],
   },
@@ -280,6 +265,21 @@ export function Header({
   };
 
   const enlacePanel = rutaPanelPorRol(user?.rol);
+  const puedePostularComoArtista =
+    !user || user.rol === "Comprador";
+
+  // Ocultar la opción "Quiero formar parte" del menú desplegable cuando la sesión activa ya es Artista, Curador o Administrador
+  const enlacesMenuVisibles = useMemo(() => {
+    return ENLACES_PRINCIPALES.map((enlace) => {
+      if (enlace.to !== "/artistas") return enlace;
+      return {
+        ...enlace,
+        subopciones: enlace.subopciones.filter((sub) =>
+          sub.to === "/artistas/quiero-formar-parte" ? puedePostularComoArtista : true
+        ),
+      };
+    });
+  }, [puedePostularComoArtista]);
 
   const esEnlacePrincipalActivo = (to: string, isActive: boolean): boolean => {
     if (to === "/arte") {
@@ -367,6 +367,16 @@ export function Header({
 
     return (
       <div className="flex items-center gap-[var(--espacio-8)]">
+        {enlacePanel && (
+          <Link
+            to={enlacePanel.to}
+            className="inline-flex min-h-[var(--alto-control-compacto)] items-center gap-2 rounded-[var(--radio-pildora)] border border-[color:var(--riel)] bg-[color:var(--carmesi)] px-3.5 py-1.5 font-[var(--fuente-texto)] text-[0.98rem] font-semibold text-[color:var(--tinta-inversa)] no-underline shadow-[var(--resplandor-primario)] transition-colors hover:border-white hover:bg-[color:var(--incandescente)]"
+          >
+            <LayoutDashboard size={16} strokeWidth={1.7} aria-hidden="true" />
+            <span className="hidden lg:inline">{enlacePanel.etiqueta}</span>
+            <span className="lg:hidden">Mi panel</span>
+          </Link>
+        )}
         <div ref={menuCuentaRef} className="relative">
           <button
             type="button"
@@ -383,28 +393,43 @@ export function Header({
             <div
               role="menu"
               aria-label="Menú de cuenta"
-              className="absolute right-0 top-full z-50 mt-[var(--espacio-8)] min-w-[220px] rounded-[var(--radio-recto)] border border-[color:var(--riel)] bg-[color:var(--fondo)] py-[var(--espacio-8)] shadow-[var(--sombra-tarjeta)]"
+              className="absolute right-0 top-full z-50 mt-[var(--espacio-8)] min-w-[230px] rounded-[var(--radio-recto)] border border-[color:var(--riel)] bg-[color:var(--fondo)] py-[var(--espacio-8)] shadow-[var(--sombra-tarjeta)]"
             >
               <div className="border-b border-[color:var(--divisor)] px-[var(--espacio-16)] pb-[var(--espacio-8)]">
                 <p className="voz-cuerpo-pequeno truncate text-[color:var(--tinta)]">
                   {user.correo_electronico}
                 </p>
-                <p className="voz-etiqueta mt-[var(--espacio-4)] text-[color:var(--tinta-suave)]">
+                <p className="voz-etiqueta mt-[var(--espacio-4)] text-[color:var(--riel)]">
                   {user.rol}
                 </p>
               </div>
 
               <ul className="list-none p-0 py-[var(--espacio-4)]">
-                <li>
-                  <Link
-                    to="/mis-compras"
-                    role="menuitem"
-                    onClick={() => setMenuCuentaAbierto(false)}
-                    className="block px-[var(--espacio-16)] py-[var(--espacio-8)] font-[var(--fuente-texto)] font-medium text-[length:var(--text-cuerpo-pequeno)] text-[color:var(--tinta)] no-underline hover:bg-[color:var(--fila-hover)]"
-                  >
-                    Mis compras
-                  </Link>
-                </li>
+                {enlacePanel && (
+                  <li>
+                    <Link
+                      to={enlacePanel.to}
+                      role="menuitem"
+                      onClick={() => setMenuCuentaAbierto(false)}
+                      className="flex items-center gap-2 px-[var(--espacio-16)] py-[var(--espacio-8)] font-[var(--fuente-texto)] font-semibold text-[length:var(--text-cuerpo-pequeno)] text-[color:var(--riel)] no-underline hover:bg-[color:var(--fila-hover)]"
+                    >
+                      <LayoutDashboard size={16} strokeWidth={1.6} aria-hidden="true" />
+                      <span>Ir a {enlacePanel.etiqueta}</span>
+                    </Link>
+                  </li>
+                )}
+                {user.rol === "Comprador" && (
+                  <li>
+                    <Link
+                      to="/mis-compras"
+                      role="menuitem"
+                      onClick={() => setMenuCuentaAbierto(false)}
+                      className="block px-[var(--espacio-16)] py-[var(--espacio-8)] font-[var(--fuente-texto)] font-medium text-[length:var(--text-cuerpo-pequeno)] text-[color:var(--tinta)] no-underline hover:bg-[color:var(--fila-hover)]"
+                    >
+                      Mis compras
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <Link
                     to="/cuenta"
@@ -415,18 +440,6 @@ export function Header({
                     Cuenta
                   </Link>
                 </li>
-                {enlacePanel && (
-                  <li>
-                    <Link
-                      to={enlacePanel.to}
-                      role="menuitem"
-                      onClick={() => setMenuCuentaAbierto(false)}
-                      className="block px-[var(--espacio-16)] py-[var(--espacio-8)] font-[var(--fuente-texto)] font-medium text-[length:var(--text-cuerpo-pequeno)] text-[color:var(--tinta)] no-underline hover:bg-[color:var(--fila-hover)]"
-                    >
-                      {enlacePanel.etiqueta}
-                    </Link>
-                  </li>
-                )}
                 <li className="mt-[var(--espacio-4)] border-t border-[color:var(--divisor)] pt-[var(--espacio-4)]">
                   <button
                     type="button"
@@ -701,10 +714,10 @@ export function Header({
             </div>
           </form>
 
-          {/* Derecha: Carrito de compra + Ingresar / Registro (o Avatar de cuenta) */}
+          {/* Derecha: Carrito de compra + Ingresar / Registro (o Botón de Panel + Avatar de cuenta) */}
           <div className="flex items-center gap-[var(--espacio-12)]">
-            {renderBotonCarrito()}
-            <div className="hidden sm:flex items-center">{renderBloqueCuenta()}</div>
+            {(!user || user.rol === "Comprador") && renderBotonCarrito()}
+            <div className="flex items-center">{renderBloqueCuenta()}</div>
 
             <button
               type="button"
@@ -725,7 +738,7 @@ export function Header({
               aria-label="Navegación principal"
               className="flex items-center gap-[var(--espacio-24)] xl:gap-[var(--espacio-32)]"
             >
-              {ENLACES_PRINCIPALES.map((enlace) => {
+              {enlacesMenuVisibles.map((enlace) => {
                 const abierto = menuDesplegableActivo === enlace.to;
                 return (
                   <div
@@ -839,7 +852,7 @@ export function Header({
               aria-label="Menú móvil"
               className="flex flex-col items-center gap-[var(--espacio-16)] text-center"
             >
-              {ENLACES_PRINCIPALES.map((enlace) => (
+              {enlacesMenuVisibles.map((enlace) => (
                 <NavLink
                   key={enlace.to}
                   to={enlace.to}
@@ -861,13 +874,24 @@ export function Header({
 
               {user ? (
                 <>
-                  <NavLink
-                    to="/mis-compras"
-                    onClick={() => setMenuMovilAbierto(false)}
-                    className="font-[var(--fuente-titulo)] font-black text-[1.5rem] text-[color:var(--tinta)] no-underline"
-                  >
-                    Mis compras
-                  </NavLink>
+                  {enlacePanel && (
+                    <NavLink
+                      to={enlacePanel.to}
+                      onClick={() => setMenuMovilAbierto(false)}
+                      className="rounded-[var(--radio-pildora)] border border-[color:var(--riel)] bg-[color:var(--carmesi)] px-6 py-2 font-[var(--fuente-titulo)] font-black text-[1.45rem] text-[color:var(--tinta-inversa)] no-underline"
+                    >
+                      {enlacePanel.etiqueta}
+                    </NavLink>
+                  )}
+                  {user.rol === "Comprador" && (
+                    <NavLink
+                      to="/mis-compras"
+                      onClick={() => setMenuMovilAbierto(false)}
+                      className="font-[var(--fuente-titulo)] font-black text-[1.5rem] text-[color:var(--tinta)] no-underline"
+                    >
+                      Mis compras
+                    </NavLink>
+                  )}
                   <NavLink
                     to="/cuenta"
                     onClick={() => setMenuMovilAbierto(false)}
@@ -875,15 +899,6 @@ export function Header({
                   >
                     Cuenta
                   </NavLink>
-                  {enlacePanel && (
-                    <NavLink
-                      to={enlacePanel.to}
-                      onClick={() => setMenuMovilAbierto(false)}
-                      className="font-[var(--fuente-titulo)] font-black text-[1.5rem] text-[color:var(--tinta)] no-underline"
-                    >
-                      {enlacePanel.etiqueta}
-                    </NavLink>
-                  )}
                   <button
                     type="button"
                     onClick={() => void cerrarSesion()}

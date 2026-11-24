@@ -1,10 +1,16 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronRight, Upload } from "lucide-react";
 import clsx from "clsx";
 import { Ambiente } from "../../components/escena/Ambiente";
 import { Button } from "../../components/ui/Button";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { rutaInicialPorRol } from "../../lib/navegacion";
+import {
+  guardarPostulacionArtista,
+  leerArchivoComoDataUrl,
+} from "../../lib/postulacionesArtistas";
 
 const OPCIONES_P1_DEDICACION = [
   "Actividad principal",
@@ -112,8 +118,19 @@ const META_PREGUNTAS: readonly MetaPregunta[] = [
  * - Pie con `← Back` a la izquierda y botón `Siguiente →` a la derecha (activo al responder).
  */
 export function QuieroFormarPartePage() {
+  const { user } = useAuth();
   const { notificar } = useToast();
   const navigate = useNavigate();
+
+  // Un usuario que ya es Artista, Curador o Administrador no debe llenar el formulario de postulación de artista nuevo:
+  // se le redirige directamente a su panel correspondiente.
+  if (user && (user.rol === "Artista" || user.rol === "Curador" || user.rol === "Administrador")) {
+    const destino =
+      user.rol === "Curador"
+        ? "/curaduria?seccion=artistas"
+        : rutaInicialPorRol(user.rol);
+    return <Navigate to={destino} replace />;
+  }
 
   const [pasoActual, setPasoActual] = useState(0);
 
@@ -225,7 +242,7 @@ export function QuieroFormarPartePage() {
     setErrorActual(null);
   };
 
-  const manejarSubmitPaso = (e: FormEvent) => {
+  const manejarSubmitPaso = async (e: FormEvent) => {
     e.preventDefault();
     if (pasoActual < TOTAL_PREGUNTAS - 1) {
       avanzarPregunta();
@@ -233,18 +250,39 @@ export function QuieroFormarPartePage() {
     }
 
     const errorFinal = validarPaso(9);
-    if (errorFinal) {
+    if (errorFinal || !p10ArchivoPdf) {
       setErrorActual(errorFinal);
       return;
     }
 
     setEnviando(true);
+    const dataUrlPdf = await leerArchivoComoDataUrl(p10ArchivoPdf);
+    guardarPostulacionArtista({
+      p1_dedicacion: p1Dedicacion,
+      p2_obra_disponible: p2ObraDisponible,
+      p3_trayectoria: p3Trayectoria,
+      p4_vinculo_palacio: p4VinculoPalacio,
+      p5_especialidad: p5Especialidad,
+      p6_nombre: p6Nombre.trim(),
+      p7_correo: p7Correo.trim(),
+      p7_whatsapp: p7Whatsapp.trim(),
+      p8_ciudad: p8Ciudad.trim(),
+      p8_instagram: p8Instagram.trim(),
+      p9_statement: p9Statement.trim(),
+      p10_portafolio_nombre: p10ArchivoPdf.name,
+      p10_portafolio_tamano_mb: `${(p10ArchivoPdf.size / (1024 * 1024)).toFixed(2)} MB`,
+      p10_portafolio_data_url: dataUrlPdf,
+    });
+
     window.setTimeout(() => {
       setEnviando(false);
       setPostulacionEnviada(true);
-      notificar("Postulación enviada al comité curatorial del Palacio Nacional.", "exito");
+      notificar(
+        "Postulación registrada en la bandeja del Curador (/curaduria?seccion=artistas).",
+        "exito"
+      );
       window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 550);
+    }, 450);
   };
 
   const renderListaRadioVertical = (

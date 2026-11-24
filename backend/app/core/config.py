@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     # Google OAuth2 / Google Identity Services (RF 1.1.2 — Social Login)
     GOOGLE_CLIENT_ID: str = ""
 
+    # IA Asistente Curatorial (Google Gemini API opcional; si está vacío usa el motor heurístico curatorial integrado)
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
     # Correo saliente (SMTP). Si SMTP_HOST queda vacío, el servicio de correo
     # cae automáticamente a "modo consola" (imprime el mensaje en el log) para
     # poder desarrollar sin depender de un servidor SMTP real.

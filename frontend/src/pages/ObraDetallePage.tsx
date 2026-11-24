@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Maximize2, QrCode, ShieldCheck, ShoppingBag, X } from "lucide-react";
+import { Box, FileText, Maximize2, QrCode, ShieldCheck, ShoppingBag, X } from "lucide-react";
 import clsx from "clsx";
 import { listarCatalogo, obtenerObra, obtenerObraPorUid, urlQrObra } from "../api/obras";
 import { obtenerPerfilArtista } from "../api/artistas";
@@ -13,6 +13,7 @@ import { useCart } from "../context/CartContext";
 import { useToast } from "../context/ToastContext";
 import { Ambiente } from "../components/escena/Ambiente";
 import { ObraCard } from "../components/ObraCard";
+import { ObraVisor3DModal } from "../components/catalogo/ObraVisor3DModal";
 import {
   OBRAS_MUESTRA_PALACIO,
   esObraMuestraLocal,
@@ -56,6 +57,7 @@ export function ObraDetallePage() {
   const [luzEncendida, setLuzEncendida] = useState(false);
   const [vistaActiva, setVistaActiva] = useState<VistaEscenario>("obra");
   const [visorAbierto, setVisorAbierto] = useState(false);
+  const [visor3DAbierto, setVisor3DAbierto] = useState(false);
   const [zoomVisor, setZoomVisor] = useState(false);
   const [mostrarBarraMovil, setMostrarBarraMovil] = useState(false);
   const [fallbackImagenFamosa, setFallbackImagenFamosa] = useState(false);
@@ -317,18 +319,29 @@ export function ObraDetallePage() {
                 )}
               </div>
 
-              <Button
-                ref={botonAmpliarRef}
-                type="button"
-                variante="secundario"
-                onClick={() => {
-                  setZoomVisor(false);
-                  setVisorAbierto(true);
-                }}
-              >
-                <Maximize2 size={20} strokeWidth={1.5} aria-hidden="true" />
-                <span>Ampliar</span>
-              </Button>
+              <div className="flex flex-wrap items-center gap-[var(--espacio-12)]">
+                <Button
+                  type="button"
+                  variante="primario"
+                  onClick={() => setVisor3DAbierto(true)}
+                >
+                  <Box size={19} strokeWidth={1.7} aria-hidden="true" />
+                  <span>Ver en 3D y escala real</span>
+                </Button>
+
+                <Button
+                  ref={botonAmpliarRef}
+                  type="button"
+                  variante="secundario"
+                  onClick={() => {
+                    setZoomVisor(false);
+                    setVisorAbierto(true);
+                  }}
+                >
+                  <Maximize2 size={20} strokeWidth={1.5} aria-hidden="true" />
+                  <span>Ampliar</span>
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -345,7 +358,7 @@ export function ObraDetallePage() {
               <h1 className="voz-h1 text-[color:var(--tinta)]">{obra.titulo}</h1>
               <p className="mt-[var(--espacio-8)]">
                 <Link
-                  to={`/?perfil_artista=${obra.id_artista}#artistas`}
+                  to={`/artistas/${obra.id_artista}`}
                   className="voz-acento text-[color:var(--tinta-suave)] underline-offset-4 hover:text-[color:var(--tinta)] hover:underline"
                 >
                   {nombreArtista}
@@ -640,6 +653,14 @@ export function ObraDetallePage() {
           </Button>
         </div>
       )}
+
+      {/* Visualizador 3D con escala humana de referencia (estilo SingulArt) */}
+      <ObraVisor3DModal
+        obra={obra}
+        nombreArtista={nombreArtista}
+        abierto={visor3DAbierto}
+        onCerrar={() => setVisor3DAbierto(false)}
+      />
 
       {/* Visor a pantalla completa ("Ampliar") con zoom por clic y cierre con Esc */}
       {visorAbierto && (

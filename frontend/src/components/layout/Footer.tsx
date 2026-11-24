@@ -85,14 +85,6 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  to="/estudio"
-                  className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
-                >
-                  Estudio Motion
-                </Link>
-              </li>
-              <li>
-                <Link
                   to="/legal/terminos"
                   className="voz-cuerpo-pequeno text-[color:var(--tinta)] no-underline hover:text-[color:var(--riel)]"
                 >

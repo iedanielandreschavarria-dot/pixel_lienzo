@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { LayoutDashboard } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { rutaInicialPorRol } from "../lib/navegacion";
 import { useToast } from "../context/ToastContext";
 import { Ambiente } from "../components/escena/Ambiente";
 import { BadgeEstadoValidacion } from "../components/ui/Badge";
@@ -299,7 +301,23 @@ export function CuentaPage() {
               <h1 className="voz-h1 text-[color:var(--tinta)]">Cuenta</h1>
               <div className="regla-titulo mt-[var(--espacio-12)]" aria-hidden="true" />
             </div>
-            <div className="flex items-center gap-[var(--espacio-12)]">
+            <div className="flex flex-wrap items-center gap-[var(--espacio-12)]">
+              {(user.rol === "Artista" ||
+                user.rol === "Curador" ||
+                user.rol === "Administrador") && (
+                <Link to={rutaInicialPorRol(user.rol)} className="no-underline">
+                  <Button variante="primario" tamano="compacto">
+                    <LayoutDashboard size={16} strokeWidth={1.6} aria-hidden="true" />
+                    <span>
+                      {user.rol === "Artista"
+                        ? "Volver al Panel del artista"
+                        : user.rol === "Curador"
+                          ? "Volver al Panel de curaduría"
+                          : "Volver al Panel institucional"}
+                    </span>
+                  </Button>
+                </Link>
+              )}
               <span className="inline-flex h-[var(--alto-estado)] items-center rounded-[var(--radio-recto)] border border-[color:var(--riel)] px-[var(--espacio-8)] font-[var(--fuente-poster)] text-[length:var(--text-etiqueta)] uppercase tracking-[0.12em] text-[color:var(--tinta)]">
                 {user.rol}
               </span>

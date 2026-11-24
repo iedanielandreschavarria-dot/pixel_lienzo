@@ -1,8 +1,35 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, FileCheck2, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  FileCheck2,
+  FileText,
+  Mail,
+  MapPin,
+  MessageCircle,
+  RefreshCw,
+  Sparkles,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { listarArtistasPendientes, validarArtista } from "../../api/artistas";
+import {
+  generarResumenCuratorialLocal,
+  obtenerResumenCuratorialIA,
+  type ResumenCuratorialIA,
+} from "../../lib/iaCuraduria";
+import {
+  actualizarResumenIAPostulacion,
+  decidirPostulacionArtista,
+  listarPostulacionesArtistas,
+  type PostulacionArtista,
+} from "../../lib/postulacionesArtistas";
 import {
   actualizarEstadoObra,
   listarObrasPendientes,
@@ -77,6 +104,423 @@ function fechaEnvioEstimada(idObra: number): string {
   const dias = calcularDiasEnCola(idObra);
   const fecha = new Date(Date.now() - dias * 86_400_000);
   return fecha.toISOString();
+}
+
+function TarjetaPostulacionFormulario({
+  postulacion,
+  onDecidir,
+  onActualizarResumenIA,
+}: {
+  postulacion: PostulacionArtista;
+  onDecidir: (idPostulacion: string, aprobar: boolean, motivo?: string) => void;
+  onActualizarResumenIA: (idPostulacion: string, resumen: ResumenCuratorialIA) => void;
+}) {
+  const { notificar } = useToast();
+  const [dialogoRechazoAbierto, setDialogoRechazoAbierto] = useState(false);
+  const [generandoIA, setGenerandoIA] = useState(false);
+  const [enfoqueIA, setEnfoqueIA] = useState<"estandar" | "comercial" | "riguroso">("estandar");
+
+  const resumenIA = useMemo(
+    () => postulacion.resumen_ia ?? generarResumenCuratorialLocal(postulacion, enfoqueIA),
+    [postulacion, enfoqueIA]
+  );
+
+  const regenerarAnalisisIA = async (nuevoEnfoque: "estandar" | "comercial" | "riguroso") => {
+    setEnfoqueIA(nuevoEnfoque);
+    setGenerandoIA(true);
+    const nuevo = await obtenerResumenCuratorialIA(postulacion, nuevoEnfoque);
+    onActualizarResumenIA(postulacion.id_postulacion, nuevo);
+    setGenerandoIA(false);
+    notificar("Resumen curatorial actualizado con IA.", "exito");
+  };
+
+  const estadoValidacionEquivalente =
+    postulacion.estado === "Aprobada"
+      ? "Verificado"
+      : postulacion.estado === "Rechazada"
+        ? "Rechazado"
+        : "Pendiente";
+
+  const whatsappLimpio = postulacion.p7_whatsapp.replace(/[^\d]/g, "");
+  const instagramUrl = postulacion.p8_instagram.startsWith("http")
+    ? postulacion.p8_instagram
+    : `https://instagram.com/${postulacion.p8_instagram.replace(/^@/, "")}`;
+
+  return (
+    <article className="flex flex-col gap-[var(--espacio-24)] border border-[color:var(--borde-reposo)] bg-[color:var(--superficie-elevada)] p-[var(--espacio-24)] sm:p-[var(--espacio-32)] shadow-[var(--sombra-tarjeta)]">
+      {/* Cabecera de la postulación */}
+      <div className="flex flex-wrap items-start justify-between gap-[var(--espacio-16)] border-b border-[color:var(--divisor)] pb-[var(--espacio-16)]">
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="voz-etiqueta text-[color:var(--riel)]">
+              Formulario «Quiero formar parte» · 10 Respuestas
+            </span>
+            <span className="codigo-certificado text-[0.82rem] text-[color:var(--tinta-suave)]">
+              {postulacion.id_postulacion}
+            </span>
+          </div>
+          <h3 className="voz-h2 mt-1 text-[color:var(--tinta)]">{postulacion.p6_nombre}</h3>
+          <p className="voz-cuerpo-pequeno text-[color:var(--tinta-suave)]">
+            Enviado el {formatearFecha(postulacion.fecha_envio)} · Especialidad:{" "}
+            <strong className="text-[color:var(--tinta)]">{postulacion.p5_especialidad}</strong>
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <BadgeEstadoValidacion estado={estadoValidacionEquivalente} />
+          {postulacion.p10_portafolio_data_url ? (
+            <a
+              href={postulacion.p10_portafolio_data_url}
+              download={postulacion.p10_portafolio_nombre}
+              className="inline-flex items-center gap-2 rounded-[var(--radio-pildora)] border border-[color:var(--riel)] bg-[color:var(--carmesi)]/25 px-4 py-2 font-[var(--fuente-texto)] text-[0.98rem] font-semibold text-[color:var(--tinta)] no-underline transition-colors hover:bg-[color:var(--carmesi)]"
+            >
+              <FileText size={16} strokeWidth={1.6} />
+              <span>Descargar Portafolio PDF ({postulacion.p10_portafolio_tamano_mb})</span>
+            </a>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-[var(--radio-pildora)] border border-[color:var(--borde-reposo)] bg-[color:var(--vacio)] px-4 py-2 font-[var(--fuente-texto)] text-[0.95rem] font-semibold text-[color:var(--tinta)]">
+              <FileText size={16} strokeWidth={1.6} className="text-[color:var(--riel)]" />
+              <span>
+                {postulacion.p10_portafolio_nombre} ({postulacion.p10_portafolio_tamano_mb})
+              </span>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* BLOQUE DE INTELIGENCIA CURATORIAL (RESUMEN GENERADO POR IA) */}
+      <section
+        aria-label="Resumen Curatorial generado por Inteligencia Artificial"
+        className="relative overflow-hidden border border-[color:var(--riel)] bg-gradient-to-br from-[#2a241d] via-[#211e1a] to-[#1a1815] p-5 sm:p-6 shadow-[0_12px_34px_rgba(0,0,0,0.32)]"
+      >
+        {/* Cabecera del asistente IA con Puntaje de Afinidad y botón Regenerar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--divisor)] pb-4">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 rounded-[var(--radio-pildora)] border border-[color:var(--riel)] bg-[color:var(--carmesi)] px-3 py-1 font-[var(--fuente-poster)] text-[0.78rem] uppercase tracking-[0.1em] text-[color:var(--tinta-inversa)]">
+              <Sparkles size={13} strokeWidth={1.8} />
+              <span>Resumen Curatorial IA</span>
+            </span>
+
+            <span className="inline-flex items-center gap-1.5 rounded-[var(--radio-pildora)] border border-[color:var(--borde-reposo)] bg-[color:var(--fondo)] px-3 py-1 font-[var(--fuente-texto)] text-[0.92rem] font-semibold text-[color:var(--riel)]">
+              <span>Afinidad: {resumenIA.puntaje_afinidad}%</span>
+              <span>·</span>
+              <span>{resumenIA.nivel_prioridad}</span>
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {(["estandar", "comercial", "riguroso"] as const).map((modo) => (
+              <button
+                key={modo}
+                type="button"
+                disabled={generandoIA}
+                onClick={() => void regenerarAnalisisIA(modo)}
+                className={`rounded-[var(--radio-pildora)] border px-2.5 py-1 font-[var(--fuente-texto)] text-[0.84rem] font-semibold transition-colors cursor-pointer ${
+                  enfoqueIA === modo
+                    ? "border-[color:var(--riel)] bg-[color:var(--riel)]/20 text-[color:var(--tinta)]"
+                    : "border-[color:var(--divisor)] bg-transparent text-[color:var(--tinta-suave)] hover:border-[color:var(--borde-reposo)] hover:text-[color:var(--tinta)]"
+                }`}
+              >
+                {modo === "estandar"
+                  ? "Vista integral"
+                  : modo === "comercial"
+                    ? "Enfoque venta/sala"
+                    : "Enfoque curatorial"}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              disabled={generandoIA}
+              onClick={() => void regenerarAnalisisIA(enfoqueIA)}
+              title="Recalcular síntesis con IA"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radio-pildora)] border border-[color:var(--borde-reposo)] bg-[color:var(--fondo)] px-3 py-1 font-[var(--fuente-texto)] text-[0.86rem] font-semibold text-[color:var(--tinta)] hover:border-[color:var(--riel)] cursor-pointer"
+            >
+              <RefreshCw
+                size={13}
+                strokeWidth={1.8}
+                className={generandoIA ? "animate-spin text-[color:var(--riel)]" : "text-[color:var(--riel)]"}
+              />
+              <span>{generandoIA ? "Analizando…" : "Regenerar IA"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Síntesis del perfil y análisis del Statement */}
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)]/75 p-4">
+            <h5 className="voz-etiqueta text-[0.78rem] text-[color:var(--riel)]">
+              1. Síntesis Ejecutiva del Registro
+            </h5>
+            <p className="mt-1.5 font-[var(--fuente-texto)] text-[1.06rem] leading-relaxed text-[color:var(--tinta)]">
+              {resumenIA.perfil_sintesis}
+            </p>
+          </div>
+
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)]/75 p-4">
+            <h5 className="voz-etiqueta text-[0.78rem] text-[color:var(--riel)]">
+              2. Análisis de Statement &amp; Portafolio PDF
+            </h5>
+            <p className="mt-1.5 font-[var(--fuente-texto)] text-[1.06rem] leading-relaxed text-[color:var(--tinta)]">
+              {resumenIA.analisis_statement}
+            </p>
+          </div>
+        </div>
+
+        {/* Fortalezas detectadas y Aspectos por verificar */}
+        <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)]/60 p-4">
+            <h5 className="voz-etiqueta flex items-center gap-1.5 text-[0.78rem] text-[color:var(--exito)]">
+              <CheckCircle2 size={14} />
+              <span>Fortalezas detectadas por la IA</span>
+            </h5>
+            <ul className="mt-2 flex flex-col gap-1.5 list-none p-0 m-0">
+              {resumenIA.fortalezas.map((fort, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-2 font-[var(--fuente-texto)] text-[0.98rem] text-[color:var(--tinta)]"
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--exito)]" />
+                  <span>{fort}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)]/60 p-4">
+            <h5 className="voz-etiqueta flex items-center gap-1.5 text-[0.78rem] text-[color:var(--aviso)]">
+              <AlertCircle size={14} />
+              <span>Puntos a verificar en curaduría</span>
+            </h5>
+            <ul className="mt-2 flex flex-col gap-1.5 list-none p-0 m-0">
+              {resumenIA.aspectos_verificar.map((asp, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-2 font-[var(--fuente-texto)] text-[0.98rem] text-[color:var(--tinta)]"
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--aviso)]" />
+                  <span>{asp}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Dictamen / Recomendación Curatorial y Mensaje sugerido */}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-4 border-t border-[color:var(--divisor)] pt-3.5">
+          <p className="font-[var(--fuente-texto)] text-[1.03rem] text-[color:var(--tinta)]">
+            <strong className="text-[color:var(--riel)]">Recomendación IA:</strong>{" "}
+            {resumenIA.recomendacion_curatorial}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard?.writeText(resumenIA.mensaje_sugerido_whatsapp);
+              notificar("Borrador de respuesta curatorial copiado al portapapeles.", "exito");
+            }}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radio-pildora)] border border-[color:var(--borde-reposo)] bg-[color:var(--fondo)] px-3.5 py-1.5 font-[var(--fuente-texto)] text-[0.9rem] font-semibold text-[color:var(--riel)] hover:border-[color:var(--riel)] cursor-pointer"
+          >
+            <Copy size={13} strokeWidth={1.7} />
+            <span>Copiar respuesta sugerida por IA</span>
+          </button>
+        </div>
+      </section>
+
+      {/* Bloque 1: Respuestas de Perfilamiento Rápido (Preguntas 1 a 5) */}
+      <div>
+        <h4 className="voz-etiqueta mb-3 text-[color:var(--riel)]">
+          Bloque 1 · Perfilamiento Rápido (Preguntas 1 a 5)
+        </h4>
+        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-3.5">
+            <dt className="font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              1. ¿Te dedicas profesionalmente al arte?
+            </dt>
+            <dd className="mt-1 font-[var(--fuente-texto)] text-[1.08rem] font-semibold text-[color:var(--tinta)]">
+              {postulacion.p1_dedicacion}
+            </dd>
+          </div>
+
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-3.5">
+            <dt className="font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              2. ¿Tienes obra producida y disponible?
+            </dt>
+            <dd className="mt-1 font-[var(--fuente-texto)] text-[1.08rem] font-semibold text-[color:var(--tinta)]">
+              {postulacion.p2_obra_disponible}
+            </dd>
+          </div>
+
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-3.5">
+            <dt className="font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              3. Trayectoria expositiva previa
+            </dt>
+            <dd className="mt-1 font-[var(--fuente-texto)] text-[1.08rem] font-semibold text-[color:var(--tinta)]">
+              {postulacion.p3_trayectoria}
+            </dd>
+          </div>
+
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-3.5">
+            <dt className="font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              4. Vínculo con el Palacio Nacional
+            </dt>
+            <dd className="mt-1 font-[var(--fuente-texto)] text-[1.08rem] font-semibold text-[color:var(--tinta)]">
+              {postulacion.p4_vinculo_palacio}
+            </dd>
+          </div>
+
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-3.5 sm:col-span-2 lg:col-span-2">
+            <dt className="font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              5. Especialidad artística
+            </dt>
+            <dd className="mt-1 font-[var(--fuente-texto)] text-[1.08rem] font-semibold text-[color:var(--riel)]">
+              {postulacion.p5_especialidad}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      {/* Bloque 2: Información Personal y Curatorial (Preguntas 6 a 10) */}
+      <div>
+        <h4 className="voz-etiqueta mb-3 text-[color:var(--riel)]">
+          Bloque 2 · Información Personal y Curatorial (Preguntas 6 a 10)
+        </h4>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-3.5">
+            <span className="block font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              6. Nombre artístico / Colectivo
+            </span>
+            <strong className="mt-1 block font-[var(--fuente-texto)] text-[1.08rem] text-[color:var(--tinta)]">
+              {postulacion.p6_nombre}
+            </strong>
+          </div>
+
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-3.5">
+            <span className="block font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              7. Correo y WhatsApp
+            </span>
+            <a
+              href={`mailto:${postulacion.p7_correo}`}
+              className="mt-1 inline-flex items-center gap-1.5 font-[var(--fuente-texto)] text-[1rem] font-semibold text-[color:var(--tinta)] hover:text-[color:var(--riel)]"
+            >
+              <Mail size={14} />
+              <span className="truncate">{postulacion.p7_correo}</span>
+            </a>
+            <div className="mt-1">
+              <a
+                href={`https://wa.me/${whatsappLimpio.startsWith("57") ? whatsappLimpio : `57${whatsappLimpio}`}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 font-[var(--fuente-texto)] text-[0.98rem] text-[color:var(--riel)] hover:underline"
+              >
+                <MessageCircle size={14} />
+                <span>{postulacion.p7_whatsapp}</span>
+              </a>
+            </div>
+          </div>
+
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-3.5">
+            <span className="block font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              8. Ciudad e Instagram
+            </span>
+            <span className="mt-1 inline-flex items-center gap-1.5 font-[var(--fuente-texto)] text-[1.05rem] font-semibold text-[color:var(--tinta)]">
+              <MapPin size={14} className="text-[color:var(--riel)]" />
+              {postulacion.p8_ciudad}
+            </span>
+            <div className="mt-1">
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-[var(--fuente-texto)] text-[0.98rem] text-[color:var(--riel)] hover:underline"
+              >
+                <span>{postulacion.p8_instagram}</span>
+                <ExternalLink size={13} />
+              </a>
+            </div>
+          </div>
+
+          <div className="border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-3.5">
+            <span className="block font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              10. Portafolio en PDF
+            </span>
+            <span className="mt-1 block truncate font-[var(--fuente-texto)] text-[1rem] font-semibold text-[color:var(--tinta)]">
+              {postulacion.p10_portafolio_nombre}
+            </span>
+            <span className="font-[var(--fuente-texto)] text-[0.88rem] text-[color:var(--tinta-suave)]">
+              {postulacion.p10_portafolio_tamano_mb}
+            </span>
+          </div>
+        </div>
+
+        {/* Pregunta 9: Biografía corta y declaración de obra (Artist Statement) */}
+        <div className="mt-3 border border-[color:var(--divisor)] bg-[color:var(--fondo)] p-4">
+          <span className="block font-[var(--fuente-texto)] text-[0.9rem] text-[color:var(--tinta-suave)]">
+            9. Biografía corta y declaración de obra (Artist Statement)
+          </span>
+          <p className="voz-cuerpo mt-1.5 text-[color:var(--tinta)]">
+            {postulacion.p9_statement}
+          </p>
+        </div>
+      </div>
+
+      {postulacion.motivos_rechazo && (
+        <div className="border border-[color:var(--peligro)]/50 bg-[color:var(--peligro)]/10 p-3.5 font-[var(--fuente-texto)] text-[1rem] text-[color:var(--tinta)]">
+          <strong>Motivo de rechazo registrado por Curaduría:</strong> {postulacion.motivos_rechazo}
+        </div>
+      )}
+
+      {/* Acciones del Curador sobre la postulación */}
+      <div className="flex flex-wrap items-center justify-between gap-[var(--espacio-12)] border-t border-[color:var(--divisor)] pt-[var(--espacio-16)]">
+        <div className="flex flex-wrap items-center gap-[var(--espacio-12)]">
+          <Button
+            variante="primario"
+            tamano="compacto"
+            disabled={postulacion.estado === "Aprobada"}
+            onClick={() => onDecidir(postulacion.id_postulacion, true)}
+          >
+            {postulacion.estado === "Aprobada" ? "Artista aprobado" : "Aprobar postulación"}
+          </Button>
+          <Button
+            variante="destructivo"
+            tamano="compacto"
+            disabled={postulacion.estado === "Rechazada"}
+            onClick={() => setDialogoRechazoAbierto(true)}
+          >
+            Rechazar
+          </Button>
+        </div>
+
+        <a
+          href={`https://wa.me/${whatsappLimpio.startsWith("57") ? whatsappLimpio : `57${whatsappLimpio}`}?text=${encodeURIComponent(
+            resumenIA.mensaje_sugerido_whatsapp
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 font-[var(--fuente-texto)] text-[1rem] font-semibold text-[color:var(--riel)] no-underline hover:underline"
+        >
+          <MessageCircle size={17} />
+          <span>Contactar por WhatsApp con mensaje IA</span>
+        </a>
+      </div>
+
+      <DialogoMotivo
+        abierto={dialogoRechazoAbierto}
+        onCerrar={() => setDialogoRechazoAbierto(false)}
+        titulo={`Rechazar postulación de ${postulacion.p6_nombre}`}
+        descripcion="El motivo quedará registrado en el expediente curatorial de la postulación."
+        etiquetaCampo="Motivos del rechazo (mínimo 20 caracteres)"
+        etiquetaConfirmar="Confirmar rechazo"
+        placeholder="El portafolio adjunto no incluye información suficiente sobre la línea de obra…"
+        minCaracteres={20}
+        destructivo
+        onConfirmar={async (motivo) => {
+          onDecidir(postulacion.id_postulacion, false, motivo);
+          setDialogoRechazoAbierto(false);
+        }}
+      />
+    </article>
+  );
 }
 
 function TarjetaArtistaCuraduria({ perfil }: { perfil: PerfilArtista }) {
@@ -199,15 +643,41 @@ export function CuraduriaPage() {
   const [modalRechazarAbierto, setModalRechazarAbierto] = useState(false);
   const [obraParaCertificar, setObraParaCertificar] = useState<Obra | null>(null);
   const [decisionesSesion, setDecisionesSesion] = useState<RegistroDecision[]>([]);
+  const [postulacionesFormulario, setPostulacionesFormulario] = useState<PostulacionArtista[]>(() =>
+    listarPostulacionesArtistas()
+  );
+
+  const manejarDecisionPostulacionFormulario = (
+    idPostulacion: string,
+    aprobar: boolean,
+    motivo?: string
+  ) => {
+    const nuevas = decidirPostulacionArtista(idPostulacion, aprobar, motivo);
+    setPostulacionesFormulario(nuevas);
+    notificar(
+      aprobar
+        ? "Postulación del artista aprobada por Curaduría."
+        : "Postulación rechazada. Se guardó el motivo curatorial.",
+      "exito"
+    );
+  };
+
+  const manejarActualizarResumenIA = (
+    idPostulacion: string,
+    resumen: ResumenCuratorialIA
+  ) => {
+    const nuevas = actualizarResumenIAPostulacion(idPostulacion, resumen);
+    setPostulacionesFormulario(nuevas);
+  };
 
   const {
     data: artistas,
     isLoading: cargandoArtistas,
     isError: errorArtistas,
-    refetch: refetchArtistas,
   } = useQuery({
     queryKey: ["artistas-pendientes"],
     queryFn: listarArtistasPendientes,
+    retry: 1,
   });
 
   const {
@@ -391,9 +861,12 @@ export function CuraduriaPage() {
     }
   };
 
+  const totalArtistasPorRevisar =
+    postulacionesFormulario.length + (artistas?.length ?? 0);
+
   const pestanasPrincipales: ItemPestana<SeccionCuraduria>[] = [
     { id: "cola", etiqueta: "Cola de revisión", conteo: colaOrdenada.length },
-    { id: "artistas", etiqueta: "Artistas", conteo: artistas?.length ?? 0 },
+    { id: "artistas", etiqueta: "Artistas", conteo: totalArtistasPorRevisar },
     { id: "certificados", etiqueta: "Certificados", conteo: sinCertificado?.length ?? 0 },
     { id: "historial", etiqueta: "Historial", conteo: decisionesSesion.length },
   ];
@@ -970,32 +1443,54 @@ export function CuraduriaPage() {
           </>
         )}
 
-        {/* SECCIÓN 2: ARTISTAS POR VALIDAR */}
+        {/* SECCIÓN 2: ARTISTAS POR VALIDAR (POSTULACIONES DEL FORMULARIO DE 10 PREGUNTAS + PERFILES) */}
         {seccionActiva === "artistas" && (
           <div className="flex flex-col gap-[var(--espacio-24)]">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[color:var(--divisor)] pb-4">
+              <div>
+                <h2 className="voz-h3 text-[color:var(--tinta)]">
+                  Postulaciones recibidas («Quiero formar parte»)
+                </h2>
+                <p className="voz-cuerpo-pequeno mt-1 text-[color:var(--tinta-suave)]">
+                  Aquí el Curador revisa las 10 respuestas enviadas por cada artista y su portafolio en PDF.
+                </p>
+              </div>
+              <span className="voz-dato text-[color:var(--riel)]">
+                {postulacionesFormulario.length}{" "}
+                {postulacionesFormulario.length === 1 ? "postulación" : "postulaciones"}
+              </span>
+            </div>
+
+            {postulacionesFormulario.length > 0 && (
+              <div className="flex flex-col gap-[var(--espacio-24)]">
+                {postulacionesFormulario.map((postulacion) => (
+                  <TarjetaPostulacionFormulario
+                    key={postulacion.id_postulacion}
+                    postulacion={postulacion}
+                    onDecidir={manejarDecisionPostulacionFormulario}
+                    onActualizarResumenIA={manejarActualizarResumenIA}
+                  />
+                ))}
+              </div>
+            )}
+
             {cargandoArtistas && (
               <div className="flex flex-col gap-[var(--espacio-16)]">
-                {Array.from({ length: 3 }).map((_, idx) => (
+                {Array.from({ length: 2 }).map((_, idx) => (
                   <Skeleton key={idx} className="h-40 w-full" />
                 ))}
               </div>
             )}
 
-            {errorArtistas && !cargandoArtistas && (
-              <SectionError
-                recurso="las solicitudes de artistas"
-                onReintentar={() => {
-                  void refetchArtistas();
-                }}
-              />
-            )}
-
-            {!cargandoArtistas && !errorArtistas && artistas && artistas.length === 0 && (
-              <EmptyState
-                titulo="No hay artistas pendientes de validación."
-                descripcion="Todas las solicitudes de vinculación han sido revisadas."
-              />
-            )}
+            {!cargandoArtistas &&
+              !errorArtistas &&
+              postulacionesFormulario.length === 0 &&
+              (!artistas || artistas.length === 0) && (
+                <EmptyState
+                  titulo="No hay artistas pendientes de validación."
+                  descripcion="Todas las solicitudes de vinculación han sido revisadas."
+                />
+              )}
 
             {!cargandoArtistas && !errorArtistas && artistas && artistas.length > 0 && (
               <div className="flex flex-col gap-[var(--espacio-16)]">

@@ -31,6 +31,7 @@ import { ArtistaPanelPage } from "./pages/artista/ArtistaPanelPage";
 import { ArtistaPerfilPage } from "./pages/artista/ArtistaPerfilPage";
 import { ObraFormPage } from "./pages/artista/ObraFormPage";
 import { CuraduriaPage } from "./pages/curaduria/CuraduriaPage";
+import { PanelInstitucionalPage } from "./pages/institucional/Paginas";
 import { EstudioMotionPage } from "./pages/EstudioMotionPage";
 import { KitPage } from "./pages/KitPage";
 
@@ -92,6 +93,10 @@ function App() {
 
         <Route element={<ProtectedRoute rolesPermitidos={["Curador"]} />}>
           <Route path="curaduria" element={<CuraduriaPage />} />
+        </Route>
+
+        <Route element={<ProtectedRoute rolesPermitidos={["Administrador"]} />}>
+          <Route path="institucional" element={<PanelInstitucionalPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

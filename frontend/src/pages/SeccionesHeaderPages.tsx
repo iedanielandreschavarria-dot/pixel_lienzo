@@ -502,21 +502,21 @@ const EXPOSICIONES_CICLO: ExposicionCuratorial[] = [
     id: "arquitecturas-del-vacio",
     estado: "En curso",
     titulo: "Arquitecturas del Vacío",
-    subtitulo: "Fotografía de gran formato y arte generativo",
+    subtitulo: "Fotografía de gran formato y escultura contemporánea",
     fechas: "Noviembre 2026 — Febrero 2027",
-    sala: "Gabinete de Luz & Estudio Motion",
+    sala: "Sala Palacio Nacional · Gabinete de Luz",
     descripcion:
-      "Obras concebidas para habitar el silencio de la sala oscura, donde la geometría arquitectónica conversa con proyecciones en movimiento.",
+      "Obras concebidas para habitar el silencio de la sala y dialogar con los arcos neorrománicos del edificio.",
   },
   {
     id: "memoria-y-soporte",
     estado: "Próxima",
-    titulo: "Memoria y Soporte: Acervo Patrimonial",
-    subtitulo: "Obra gráfica histórica y restauración documental",
+    titulo: "Memoria y Soporte: Obra Gráfica",
+    subtitulo: "Grabado histórico y restauración documental",
     fechas: "Marzo 2027 — Junio 2027",
     sala: "Sala Palacio Nacional · Bóveda Sur",
     descripcion:
-      "Revisión de piezas catalogadas como patrimonio histórico con protocolos de certificación digital y trazabilidad de conservación.",
+      "Revisión de piezas de grabado y obra gráfica con protocolos de certificación digital y trazabilidad de conservación.",
   },
 ];
 
@@ -620,8 +620,8 @@ export function ExposicionesPage() {
                 Piezas integradas en la exposición actual
               </h2>
             </div>
-            <Link to="/estudio" className="enlace-acceso text-[1rem]">
-              Ir a Estudio Motion →
+            <Link to="/arte" className="enlace-acceso text-[1rem]">
+              Ver catálogo completo →
             </Link>
           </div>
 
@@ -681,22 +681,15 @@ export function ColeccionesPage() {
         id: "pintura-contemporanea",
         nombre: "Pintura & Materia",
         descripcion: "Óleo, acrílico y pigmentos sobre lino de gran formato.",
-        cantidad: todas.length,
+        cantidad: todas.length || 6,
         href: "/arte",
       },
       {
         id: "obra-grafica",
         nombre: "Obra Gráfica & Grabado",
         descripcion: "Serigrafía, aguafuerte y ediciones numeradas con sello único.",
-        cantidad: Math.max(1, Math.floor(todas.length / 2)),
+        cantidad: Math.max(2, Math.floor((todas.length || 6) / 2)),
         href: "/arte",
-      },
-      {
-        id: "patrimonio",
-        nombre: "Acervo Patrimonial",
-        descripcion: "Obras con clasificación de valor histórico y custodia documental.",
-        cantidad: todas.filter((o) => o.es_patrimonio_historico).length || todas.length,
-        href: "/sala-palacio-nacional",
       },
     ];
   }, [categorias, obras]);
@@ -792,19 +785,11 @@ export function MasPage() {
       icono: ShieldCheck,
     },
     {
-      to: "/estudio",
-      etiqueta: "Proyección 16:9",
-      titulo: "Estudio Motion",
-      descripcion:
-        "Sala de proyección dedicada a obras en movimiento, videoarte y piezas generativas en silencio de galería.",
-      icono: Film,
-    },
-    {
       to: "/sala-palacio-nacional",
       etiqueta: "Sede Física",
       titulo: "Sala Palacio Nacional",
       descripcion:
-        "Conoce nuestra bóveda expositiva principal, el protocolo de códigos QR en sala y las piezas patrimoniales.",
+        "Conoce nuestra bóveda expositiva principal, el protocolo de códigos QR en sala y las galerías del edificio.",
       icono: Building2,
     },
     {

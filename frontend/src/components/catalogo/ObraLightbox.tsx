@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Share2, ShieldCheck, ShoppingBag, X } from "lucide-react";
+import { Box, ChevronLeft, ChevronRight, Share2, ShieldCheck, ShoppingBag, X } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import {
   calcularDimensionesObra,
@@ -14,6 +14,7 @@ import {
 import { Button } from "../ui/Button";
 import { BadgeEstado } from "../ui/Badge";
 import { formatearMoneda } from "../../lib/formato";
+import { ObraVisor3DModal } from "./ObraVisor3DModal";
 import type { Obra } from "../../types";
 
 export interface ObraLightboxProps {
@@ -53,6 +54,7 @@ export function ObraLightbox({
   const [errorImagen, setErrorImagen] = useState(false);
   const [imagenCargada, setImagenCargada] = useState(false);
   const [enlaceCopiado, setEnlaceCopiado] = useState(false);
+  const [visor3DAbierto, setVisor3DAbierto] = useState(false);
 
   // Reiniciar estados visuales cuando cambia la obra activa en el Lightbox
   useEffect(() => {
@@ -342,6 +344,16 @@ export function ObraLightbox({
               {vendida ? "Ver ficha y certificado" : "Adquirir / Ver ficha completa"}
             </Button>
 
+            <Button
+              type="button"
+              variante="secundario"
+              onClick={() => setVisor3DAbierto(true)}
+              className="w-full"
+            >
+              <Box size={17} strokeWidth={1.6} aria-hidden="true" />
+              <span>Ver en 3D y escala real</span>
+            </Button>
+
             {!vendida && obra.estado_obra === "Publicado" && (
               <Button
                 type="button"
@@ -386,6 +398,12 @@ export function ObraLightbox({
           </div>
         </aside>
       </div>
+      <ObraVisor3DModal
+        obra={obra}
+        nombreArtista={artistaTexto}
+        abierto={visor3DAbierto}
+        onCerrar={() => setVisor3DAbierto(false)}
+      />
     </div>
   );
 }

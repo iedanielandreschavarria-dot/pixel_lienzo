@@ -9,6 +9,8 @@ export function rutaInicialPorRol(rol: NombreRol | null | undefined): string {
       return "/artista";
     case "Curador":
       return "/curaduria";
+    case "Administrador":
+      return "/institucional";
     default:
       return "/";
   }
