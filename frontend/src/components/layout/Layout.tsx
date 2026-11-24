@@ -29,6 +29,7 @@ const PATRONES_CONOCIDOS_NIVEL_1_2: RegExp[] = [
   /^\/verificar-certificado$/,
   /^\/estudio$/,
   /^\/estudio-motion$/,
+  /^\/carrito$/,
   /^\/artistas(\/[^/]+)?$/,
   /^\/compras\/[^/]+\/resultado$/,
   /^\/checkout\/[^/]+(\/resultado)?$/,

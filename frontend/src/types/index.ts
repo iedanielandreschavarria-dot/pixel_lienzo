@@ -137,11 +137,19 @@ export interface Transaccion {
   referencia_pasarela: string | null;
 }
 
+export type PasarelaPago = "wompi" | "stripe";
+
 export interface TransaccionCreada extends Transaccion {
   checkout_url: string;
+  pasarela?: PasarelaPago;
 }
 
 export interface CheckoutWompi {
+  checkout_url: string;
+  referencia: string;
+}
+
+export interface CheckoutStripe {
   checkout_url: string;
   referencia: string;
 }

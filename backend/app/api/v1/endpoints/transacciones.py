@@ -6,10 +6,11 @@ La confirmación del pago llega de forma asíncrona vía el webhook de Wompi
 El PATCH manual de estado se conserva como respaldo administrativo (p. ej.
 para dispersión de fondos o para corregir manualmente un caso excepcional).
 """
+import json
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import ROL_ADMINISTRADOR, ROL_ARTISTA, ROL_COMPRADOR, get_current_user, require_roles
@@ -23,6 +24,7 @@ from app.models.obra_arte import ObraArte
 from app.models.transaccion import Transaccion
 from app.models.usuario import Usuario
 from app.schemas.transaccion import (
+    CheckoutStripeOut,
     CheckoutWompiOut,
     ComisionOut,
     ComisionUpdate,
@@ -35,6 +37,13 @@ from app.schemas.transaccion import (
 from app.services.audit_service import ACCION_CONFIG_COMISION, ACCION_DISPERSION_PAGO, log_action
 from app.services.email_service import enviar_notificacion_dispersion, enviar_notificacion_venta
 from app.services.pagos_service import reembolsar_transaccion
+from app.services.stripe_service import (
+    crear_sesion_checkout_stripe,
+    generar_referencia_stripe,
+    id_transaccion_desde_referencia_stripe,
+    stripe_configurado,
+    verificar_firma_webhook_stripe,
+)
 from app.services.wompi_service import (
     checkout_configurado,
     construir_url_checkout,
@@ -97,13 +106,15 @@ def _url_retorno_frontend(id_transaccion: int) -> str:
     return f"{settings.FRONTEND_URL}/compras/{id_transaccion}/resultado"
 
 
-def _exigir_pasarela_configurada() -> None:
+def _exigir_pasarela_configurada(pasarela: str = "wompi") -> None:
+    if pasarela == "stripe":
+        return
     if not checkout_configurado():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
-                "La pasarela de pago no está configurada. Define WOMPI_PUBLIC_KEY y "
-                "WOMPI_INTEGRITY_SECRET en el archivo .env del backend."
+                "La pasarela de pago Wompi no está configurada. Define WOMPI_PUBLIC_KEY y "
+                "WOMPI_INTEGRITY_SECRET en el archivo .env del backend o selecciona Stripe."
             ),
         )
 
@@ -166,7 +177,8 @@ def crear_transaccion(
     `POST /transacciones/webhook/wompi`."""
     # Se valida antes de tocar la obra: no tiene sentido reservar una pieza
     # si después no vamos a poder cobrarla.
-    _exigir_pasarela_configurada()
+    pasarela_elegida = payload.pasarela or "wompi"
+    _exigir_pasarela_configurada(pasarela_elegida)
     _liberar_reservas_vencidas(db)
 
     obra = db.query(ObraArte).filter(ObraArte.id_obra == payload.id_obra).with_for_update().first()
@@ -199,18 +211,41 @@ def crear_transaccion(
     db.add(transaccion)
     db.flush()
 
-    referencia = generar_referencia(transaccion.id_transaccion)
-    transaccion.referencia_pasarela = referencia
-    db.commit()
-    db.refresh(transaccion)
+    if pasarela_elegida == "stripe":
+        referencia = generar_referencia_stripe(transaccion.id_transaccion)
+        transaccion.referencia_pasarela = referencia
+        db.commit()
+        db.refresh(transaccion)
 
-    checkout_url = construir_url_checkout(
-        referencia=referencia,
-        monto_en_centavos=int(transaccion.monto_total * 100),
-        redirect_url=_url_retorno_frontend(transaccion.id_transaccion),
-        correo_comprador=usuario.correo_electronico,
+        checkout_url = crear_sesion_checkout_stripe(
+            referencia=referencia,
+            titulo_obra=obra.titulo,
+            monto_en_centavos=int(transaccion.monto_total * 100),
+            correo_comprador=usuario.correo_electronico,
+            success_url=_url_retorno_frontend(transaccion.id_transaccion),
+            cancel_url=f"{settings.FRONTEND_URL}/obras/{obra.id_obra}?checkout=1&transaccion={transaccion.id_transaccion}",
+        )
+        # Si Stripe está en modo sandbox local sin llave secreta, confirmamos el pago de prueba automáticamente
+        if not stripe_configurado():
+            _confirmar_pago(db, transaccion)
+    else:
+        referencia = generar_referencia(transaccion.id_transaccion)
+        transaccion.referencia_pasarela = referencia
+        db.commit()
+        db.refresh(transaccion)
+
+        checkout_url = construir_url_checkout(
+            referencia=referencia,
+            monto_en_centavos=int(transaccion.monto_total * 100),
+            redirect_url=_url_retorno_frontend(transaccion.id_transaccion),
+            correo_comprador=usuario.correo_electronico,
+        )
+
+    return TransaccionCreadaOut(
+        **TransaccionOut.model_validate(transaccion).model_dump(),
+        checkout_url=checkout_url,
+        pasarela=pasarela_elegida,
     )
-    return TransaccionCreadaOut(**TransaccionOut.model_validate(transaccion).model_dump(), checkout_url=checkout_url)
 
 
 @router.get("/{id_transaccion}/checkout-wompi", response_model=CheckoutWompiOut)
@@ -244,6 +279,41 @@ def obtener_checkout_wompi(
         correo_comprador=usuario.correo_electronico,
     )
     return CheckoutWompiOut(checkout_url=checkout_url, referencia=referencia)
+
+
+@router.get("/{id_transaccion}/checkout-stripe", response_model=CheckoutStripeOut)
+def obtener_checkout_stripe(
+    id_transaccion: int,
+    usuario: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Regenera la sesión de pago de Stripe Checkout para una transacción pendiente."""
+    transaccion = db.get(Transaccion, id_transaccion)
+    if transaccion is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transacción no encontrada")
+    if transaccion.id_comprador != usuario.id_usuario and usuario.rol.nombre_rol != ROL_ADMINISTRADOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene acceso a esta transacción")
+    if transaccion.estado_pago != "Procesando":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Esta transacción ya no admite pago")
+
+    obra = db.get(ObraArte, transaccion.id_obra)
+    titulo_obra = obra.titulo if obra else f"Obra #{transaccion.id_obra}"
+
+    referencia = generar_referencia_stripe(transaccion.id_transaccion)
+    transaccion.referencia_pasarela = referencia
+    db.commit()
+
+    checkout_url = crear_sesion_checkout_stripe(
+        referencia=referencia,
+        titulo_obra=titulo_obra,
+        monto_en_centavos=int(transaccion.monto_total * 100),
+        correo_comprador=usuario.correo_electronico,
+        success_url=_url_retorno_frontend(transaccion.id_transaccion),
+        cancel_url=f"{settings.FRONTEND_URL}/obras/{transaccion.id_obra}?checkout=1&transaccion={transaccion.id_transaccion}",
+    )
+    if not stripe_configurado():
+        _confirmar_pago(db, transaccion)
+    return CheckoutStripeOut(checkout_url=checkout_url, referencia=referencia)
 
 
 @router.get("", response_model=list[TransaccionOut])
@@ -373,6 +443,45 @@ def webhook_wompi(payload: dict = Body(...), db: Session = Depends(get_db)):
     # Otros estados (p. ej. "PENDING") no requieren ninguna acción todavía.
 
     return WebhookRespuesta(mensaje="Evento procesado correctamente")
+
+
+@router.post("/webhook/stripe", response_model=WebhookRespuesta, include_in_schema=False)
+async def webhook_stripe(request: Request, db: Session = Depends(get_db)):
+    """Endpoint público para eventos de Stripe (`checkout.session.completed`,
+    `checkout.session.expired` y `payment_intent.payment_failed`).
+    Valida la firma HMAC-SHA256 de la cabecera `Stripe-Signature`."""
+    raw_body = await request.body()
+    sig_header = request.headers.get("Stripe-Signature")
+
+    if not verificar_firma_webhook_stripe(raw_body, sig_header):
+        logger.warning("Webhook de Stripe con firma inválida, rechazado.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Firma de Stripe inválida")
+
+    try:
+        evento = json.loads(raw_body.decode("utf-8"))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="JSON inválido")
+
+    tipo_evento = evento.get("type", "")
+    objeto = (evento.get("data") or {}).get("object") or {}
+    referencia = objeto.get("client_reference_id") or (objeto.get("metadata") or {}).get("referencia") or ""
+
+    id_transaccion = id_transaccion_desde_referencia_stripe(referencia)
+    if id_transaccion is None:
+        return WebhookRespuesta(mensaje="Evento de Stripe recibido (referencia no reconocida)")
+
+    transaccion = (
+        db.query(Transaccion).filter(Transaccion.id_transaccion == id_transaccion).with_for_update().first()
+    )
+    if transaccion is None or transaccion.estado_pago != "Procesando":
+        return WebhookRespuesta(mensaje="Evento de Stripe recibido (ya procesado)")
+
+    if tipo_evento == "checkout.session.completed" and objeto.get("payment_status") == "paid":
+        _confirmar_pago(db, transaccion)
+    elif tipo_evento in ("checkout.session.expired", "payment_intent.payment_failed"):
+        _rechazar_pago(db, transaccion)
+
+    return WebhookRespuesta(mensaje="Evento de Stripe procesado correctamente")
 
 
 @router.patch(

@@ -13,8 +13,12 @@ ESTADOS_PAGO_LITERAL = Literal[
 ]
 
 
+PASARELAS_PAGO_LITERAL = Literal["wompi", "stripe"]
+
+
 class TransaccionCreate(BaseModel):
     id_obra: int
+    pasarela: PASARELAS_PAGO_LITERAL = "wompi"
 
 
 class TransaccionEstadoUpdate(BaseModel):
@@ -47,13 +51,19 @@ class TransaccionOut(BaseModel):
 
 
 class TransaccionCreadaOut(TransaccionOut):
-    """Respuesta de `POST /transacciones`: incluye la URL de pago de Wompi
+    """Respuesta de `POST /transacciones`: incluye la URL de pago (Wompi o Stripe)
     a la que el frontend debe redirigir al comprador."""
 
     checkout_url: str
+    pasarela: PASARELAS_PAGO_LITERAL = "wompi"
 
 
 class CheckoutWompiOut(BaseModel):
+    checkout_url: str
+    referencia: str
+
+
+class CheckoutStripeOut(BaseModel):
     checkout_url: str
     referencia: str
 

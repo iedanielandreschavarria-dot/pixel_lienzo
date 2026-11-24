@@ -285,7 +285,7 @@
 /* ---------- Disco arquitectónico (disco.css) ---------- */
 .disco {
   position: absolute;
-  z-index: 10;
+  z-index: 20;
   left: 50%;
   margin-left: calc(var(--D) / -2);
   top: calc(var(--cy) - var(--D) / 2);

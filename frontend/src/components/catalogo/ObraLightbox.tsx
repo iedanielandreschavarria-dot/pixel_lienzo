@@ -47,7 +47,7 @@ export function ObraLightbox({
   triggerRef,
 }: ObraLightboxProps) {
   const navigate = useNavigate();
-  const { agregarObra, abrirCarrito, estaEnCarrito } = useCart();
+  const { agregarObra, estaEnCarrito } = useCart();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -363,12 +363,13 @@ export function ObraLightbox({
                     agregarObra(obra);
                   }
                   onClose();
-                  abrirCarrito();
+                  window.scrollTo({ top: 0, behavior: "auto" });
+                  navigate("/carrito");
                 }}
                 className="w-full"
               >
                 <ShoppingBag size={17} strokeWidth={1.6} aria-hidden="true" />
-                <span>{estaEnCarrito(obra.id_obra) ? "Ver en el carrito" : "Agregar al carrito"}</span>
+                <span>{estaEnCarrito(obra.id_obra) ? "Ver en tu carrito" : "Agregar al carrito"}</span>
               </Button>
             )}
 

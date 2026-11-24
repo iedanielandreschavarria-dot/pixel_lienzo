@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import clsx from "clsx";
@@ -20,7 +20,7 @@ export interface InicioPageProps {
  * Página de Inicio con scroll natural (sin actos):
  * - Mantiene el arco completo (.arco) con sus rieles extendiéndose hacia abajo al hacer scroll.
  * - En la cúspide del arco (.disco): "Pixel & Lienzo", "Arte con certificado verificable" y únicamente
- *   el botón "Explorar obras" (que anima el arco y envía directamente al catálogo de obras).
+ *   el botón "Explorar obras" (que lleva directamente al catálogo de obras sin animación de espera).
  * - Al bajar por el cuerpo del arco: sección "Galería Palacio Nacional" con el bloque
  *   "Encuentra tu obra ideal", mostrando una selección de obras enmarcadas en su ambiente
  *   (que al pasar el mouse se despliegan completas) y el botón "Ver todo" que lleva al catálogo entero (/arte).
@@ -29,8 +29,6 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
   const navigate = useNavigate();
 
   const [desdeAcceso] = useState(() => obtenerUltimaEscena().escena === "acceso");
-  const [saliendoAlCatalogo, setSaliendoAlCatalogo] = useState(false);
-  const timerCatalogoRef = useRef<number | null>(null);
 
   const { data: obrasBackend } = useQuery({
     queryKey: ["catalogo", "inicio-destacadas"],
@@ -53,9 +51,6 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
   useEffect(() => {
     document.title = "Pixel & Lienzo · Arte con certificado verificable";
     registrarEscenaActual("inicio", "/");
-    return () => {
-      if (timerCatalogoRef.current) window.clearTimeout(timerCatalogoRef.current);
-    };
   }, []);
 
   // Sincroniza el progreso de scroll (--p) para la intensidad ambiental de la luz inferior
@@ -100,29 +95,11 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
     [navigate, onExplorarCatalogo]
   );
 
-  const explorarObrasConAnimacionArco = useCallback(
-    (rutaDestino = "/arte") => {
-      if (saliendoAlCatalogo) return;
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (reduceMotion) {
-        irAlCatalogo(rutaDestino);
-        return;
-      }
-      setSaliendoAlCatalogo(true);
-      if (timerCatalogoRef.current) window.clearTimeout(timerCatalogoRef.current);
-      timerCatalogoRef.current = window.setTimeout(() => {
-        irAlCatalogo(rutaDestino);
-      }, 820);
-    },
-    [irAlCatalogo, saliendoAlCatalogo]
-  );
-
   return (
     <div
       className={clsx(
         "pagina-escena text-[color:var(--tinta)]",
-        desdeAcceso && "escena-desde-acceso",
-        saliendoAlCatalogo && "escena-hacia-catalogo"
+        desdeAcceso && "escena-desde-acceso"
       )}
     >
       {/* Entrada: punto de luz una sola vez por sesión (se omite con movimiento reducido) */}
@@ -134,34 +111,35 @@ export function InicioPage({ onExplorarCatalogo }: InicioPageProps) {
       {/* Arco completo que nace arriba y se mantiene extendido con sus rieles al bajar */}
       <Arco nivel={3} />
 
-      {/* Disco en la cúspide del arco: únicamente con la acción "Explorar obras" */}
+      {/* Disco en la cúspide del arco: acción "Explorar obras" directa al catálogo */}
       <Disco
         nivel={3}
         variante="escena"
         titulo="Pixel & Lienzo"
         subtitulo="Arte con certificado verificable"
+        onTituloClick={() => irAlCatalogo("/arte")}
       >
-        <div className="flex items-center justify-center">
-          <button
-            type="button"
-            onClick={() => explorarObrasConAnimacionArco("/arte")}
-            className="disco-enlace disco-enlace--primario"
+        <div className="relative z-30 flex items-center justify-center">
+          <Link
+            to="/arte"
+            onClick={() => window.scrollTo({ top: 0, behavior: "auto" })}
+            className="disco-enlace disco-enlace--primario pointer-events-auto"
           >
             Explorar obras
-          </button>
+          </Link>
         </div>
       </Disco>
 
       {/* Siguiente sección al bajar por el arco: Galería Palacio Nacional */}
       <div
-        className="relative z-10 mx-auto w-full px-[var(--espacio-16)]"
+        className="relative z-10 mx-auto w-full px-[var(--espacio-16)] pointer-events-none"
         style={{
           paddingTop: "calc(var(--margen-superior) + var(--W) * 0.88)",
         }}
       >
         <section
           aria-labelledby="titulo-galeria-palacio-nacional"
-          className="mx-auto w-full max-w-[min(860px,calc(var(--W)-48px))] min-w-[min(100%,320px)] border border-[color:var(--borde-reposo)] bg-[#221f1b]/95 p-[var(--espacio-24)] sm:p-[var(--espacio-48)] shadow-[0_24px_70px_rgba(10,9,8,0.45)] backdrop-blur-sm"
+          className="pointer-events-auto mx-auto w-full max-w-[min(860px,calc(var(--W)-48px))] min-w-[min(100%,320px)] border border-[color:var(--borde-reposo)] bg-[#221f1b]/95 p-[var(--espacio-24)] sm:p-[var(--espacio-48)] shadow-[0_24px_70px_rgba(10,9,8,0.45)] backdrop-blur-sm"
         >
           {/* Encabezado y descripción real de Galería Palacio Nacional */}
           <header className="flex flex-col items-center text-center">

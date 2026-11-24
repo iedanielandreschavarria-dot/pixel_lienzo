@@ -181,7 +181,6 @@ export function Header({
     cantidad: cantidadCarrito,
     total: totalCarrito,
     abierto: carritoAbierto,
-    abrirCarrito,
     cerrarCarrito,
     quitarObra,
     vaciarCarrito,
@@ -301,11 +300,10 @@ export function Header({
   };
 
   const renderBotonCarrito = () => (
-    <button
-      type="button"
-      onClick={abrirCarrito}
+    <Link
+      to="/carrito"
       aria-label={`Carrito de compra (${cantidadCarrito} ${cantidadCarrito === 1 ? "obra" : "obras"})`}
-      className="relative inline-flex min-h-[var(--alto-control-compacto)] items-center gap-[var(--espacio-8)] rounded-[var(--radio-pildora)] border border-[color:var(--borde-reposo)] bg-[color:var(--fondo)] px-[var(--espacio-16)] py-[var(--espacio-8)] font-[var(--fuente-texto)] font-semibold text-[length:var(--text-cuerpo-pequeno)] text-[color:var(--tinta)] transition-colors duration-[var(--duracion-hover)] hover:border-[color:var(--carmesi)] cursor-pointer"
+      className="relative inline-flex min-h-[var(--alto-control-compacto)] items-center gap-[var(--espacio-8)] rounded-[var(--radio-pildora)] border border-[color:var(--borde-reposo)] bg-[color:var(--fondo)] px-[var(--espacio-16)] py-[var(--espacio-8)] font-[var(--fuente-texto)] font-semibold text-[length:var(--text-cuerpo-pequeno)] text-[color:var(--tinta)] no-underline transition-colors duration-[var(--duracion-hover)] hover:border-[color:var(--carmesi)] cursor-pointer"
     >
       <ShoppingBag size={18} strokeWidth={1.6} aria-hidden="true" className="text-[color:var(--carmesi)]" />
       <span className="hidden sm:inline">Carrito</span>
@@ -319,7 +317,7 @@ export function Header({
       >
         {cantidadCarrito}
       </span>
-    </button>
+    </Link>
   );
 
   const renderBotonWhatsApp = () => (

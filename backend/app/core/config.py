@@ -104,6 +104,12 @@ class Settings(BaseSettings):
     # transacción sigue en 'Procesando' sin confirmación del webhook de Wompi.
     CHECKOUT_RESERVATION_EXPIRE_MINUTES: int = 30
 
+    # Pasarela de pago: Stripe (Pagos internacionales USD/EUR/COP, Apple Pay, Google Pay, Tarjetas globales)
+    STRIPE_PUBLIC_KEY: str = ""
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_CURRENCY: str = "cop"
+
     # CORS: orígenes permitidos para el frontend en React
     # (Create React App usa :3000, Vite usa :5173 por defecto)
     # `NoDecode` evita que pydantic-settings intente un json.loads() automático

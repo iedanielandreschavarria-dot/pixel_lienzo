@@ -16,6 +16,7 @@ import { ObraDetallePage } from "./pages/ObraDetallePage";
 import { MisComprasPage } from "./pages/MisComprasPage";
 import { CuentaPage } from "./pages/CuentaPage";
 import { LegalContactoPage } from "./pages/LegalContactoPage";
+import { CheckoutPage } from "./pages/CheckoutPage";
 import { CheckoutResultadoPage } from "./pages/CheckoutResultadoPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { VerificarCertificadoPage } from "./pages/VerificarCertificadoPage";
@@ -60,6 +61,7 @@ function App() {
         <Route path="obras/:idObra" element={<ObraDetallePage />} />
         <Route path="verificar/:sello" element={<VerificarCertificadoPage />} />
         <Route path="estudio" element={<EstudioMotionPage />} />
+        <Route path="carrito" element={<CheckoutPage />} />
 
         {/* Páginas legales, contacto y cuenta */}
         <Route path="cuenta" element={<CuentaPage />} />

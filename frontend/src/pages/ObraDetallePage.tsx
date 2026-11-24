@@ -7,7 +7,6 @@ import { listarCatalogo, obtenerObra, obtenerObraPorUid, urlQrObra } from "../ap
 import { obtenerPerfilArtista } from "../api/artistas";
 import { obtenerCertificado, urlQrCertificado } from "../api/certificados";
 import { obtenerTrazabilidad } from "../api/trazabilidad";
-import { crearTransaccion } from "../api/transacciones";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../context/ToastContext";
@@ -28,7 +27,6 @@ import { Breadcrumbs } from "../components/ui/Breadcrumbs";
 import { SelloCertificado } from "../components/ui/SelloCertificado";
 import { PageProgressBar, Skeleton } from "../components/ui/Skeleton";
 import { formatearFecha, formatearMoneda } from "../lib/formato";
-import { obtenerMensajeError } from "../api/client";
 import { CheckoutPage } from "./CheckoutPage";
 import { NotFoundPage } from "./NotFoundPage";
 
@@ -47,13 +45,12 @@ export function ObraDetallePage() {
   const { idObra } = useParams<{ idObra: string }>();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { agregarObra, abrirCarrito, estaEnCarrito } = useCart();
+  const { agregarObra, estaEnCarrito } = useCart();
   const { notificar } = useToast();
   const navigate = useNavigate();
 
   const enModoCheckout = searchParams.get("checkout") === "1";
 
-  const [comprando, setComprando] = useState(false);
   const [luzEncendida, setLuzEncendida] = useState(false);
   const [vistaActiva, setVistaActiva] = useState<VistaEscenario>("obra");
   const [visorAbierto, setVisorAbierto] = useState(false);
@@ -209,23 +206,10 @@ export function ObraDetallePage() {
   const vendida = obra.estado_obra === "Vendido";
   const reservada = obra.estado_obra === "Reservado";
 
-  const comprar = async () => {
-    if (!user) {
-      navigate("/login", { state: { from: { pathname: `/obras/${obra.id_obra}` } } });
-      return;
-    }
-    if (user.rol !== "Comprador") {
-      notificar("Solo una cuenta de Coleccionista puede adquirir obras.", "error");
-      return;
-    }
-    setComprando(true);
-    try {
-      const transaccion = await crearTransaccion(obra.id_obra);
-      window.location.href = transaccion.checkout_url;
-    } catch (error) {
-      notificar(obtenerMensajeError(error, "No fue posible iniciar el pago."), "error");
-      setComprando(false);
-    }
+  const comprar = () => {
+    agregarObra(obra);
+    window.scrollTo({ top: 0, behavior: "auto" });
+    navigate(`/obras/${obra.id_obra}?checkout=1`);
   };
 
   const esMuestraLocal = esObraMuestraLocal(obra);
@@ -417,7 +401,6 @@ export function ObraDetallePage() {
                     type="button"
                     variante="primario"
                     disabled={!disponible}
-                    cargando={comprando}
                     onClick={comprar}
                     className="flex-1"
                   >
@@ -428,18 +411,17 @@ export function ObraDetallePage() {
                     variante="secundario"
                     disabled={!disponible}
                     onClick={() => {
-                      if (estaEnCarrito(obra.id_obra)) {
-                        abrirCarrito();
-                      } else {
+                      if (!estaEnCarrito(obra.id_obra)) {
                         agregarObra(obra);
-                        notificar("Obra agregada al carrito de compra", "exito");
-                        abrirCarrito();
+                        notificar("Obra agregada a tu carrito", "exito");
                       }
+                      window.scrollTo({ top: 0, behavior: "auto" });
+                      navigate("/carrito");
                     }}
                     className="flex-1"
                   >
                     <ShoppingBag size={18} strokeWidth={1.6} aria-hidden="true" />
-                    <span>{estaEnCarrito(obra.id_obra) ? "En el carrito" : "Agregar al carrito"}</span>
+                    <span>{estaEnCarrito(obra.id_obra) ? "Ver en tu carrito" : "Agregar al carrito"}</span>
                   </Button>
                 </div>
               )}
@@ -645,7 +627,6 @@ export function ObraDetallePage() {
           <Button
             type="button"
             variante="primario"
-            cargando={comprando}
             onClick={comprar}
             className="shrink-0"
           >
