@@ -37,7 +37,7 @@ El proyecto resuelve cinco problemáticas críticas en la gestión y comercializ
 ### 3.1. Arquitectura Técnica (Modelo-Vista-Controlador Desacoplado en Capas)
 El sistema separa sus responsabilidades en tres grandes bloques que se comunican mediante el protocolo **HTTP / JSON**:
 
-- **La Vista (Frontend — React 19 + TypeScript + Vite 8 + Tailwind CSS 4):** Aplicación web interactiva (*Single Page Application*) que presenta el catálogo (incluyendo visualización 3D y animaciones con *Framer Motion*), los formularios de acceso y los paneles de cada rol.
+- **La Vista (Frontend — React 19 + TypeScript + Vite 8 + Tailwind CSS 4):** Aplicación web interactiva (*Single Page Application*) articulada bajo el sistema visual *"Piedra Basalto Cálida & Oro Champán Luminoso"* (sintetizado en `design.md`), con 3 niveles de intensidad escénica, portada con arco arquitectónico, catálogo Masonry con puesta en escena en sala/estudio, Lightbox sincronizado por URL, visor 3D a escala humana (`1.75 m`), Estudio Motion (*Framer Motion*), acceso federado con Google y paneles operativos para cada rol.
 - **El Controlador y Servicios (Backend — Python 3.13 + FastAPI):** API RESTful organizada en capas (`endpoints/` para rutas HTTP y control de permisos, y `services/` para la lógica de pagos con Wompi, marcas de agua, cifrado, códigos OTP, códigos QR y auditoría).
 - **El Modelo y Persistencia (SQLAlchemy 2.0 + Alembic + MySQL 8.0):** Base de datos relacional (`pixel_lienzo_db`) normalizada con 13 tablas y esquemas de validación/filtrado **Pydantic** (`schemas/`).
 
@@ -71,9 +71,11 @@ El sistema separa sus responsabilidades en tres grandes bloques que se comunican
 - **Base de Datos y Backend (100 % completado):**
   - 13 modelos ORM en SQLAlchemy sincronizados con MySQL (`pixel_lienzo_db`) y migraciones con Alembic + *seeds* automáticos de roles y configuración.
   - **71 rutas cargadas en FastAPI** cubriendo los 5 módulos, incluyendo autenticación con Google (`/auth/google/*`), creación interna de usuarios (`POST /usuarios`), directorio público de artistas (`GET /artistas`), edición curatorial y patrimonial, expiración de reservas de Wompi (`/liberar-vencidas`), confirmación de entrega por comprador (`/confirmar-recepcion`), descarga de certificado validando entrega (`/descargar`) y trazabilidad global (`GET /trazabilidad`).
-- **Frontend e Identidad Visual (Avance alto):**
-  - Integración del Kit de Identidad Visual con la carpeta `frontend/4x/` (8 variantes cromáticas del isotipo oficial), sistema de 3 niveles de ambiente visual (`Ambiente.tsx`), `LogoMarca.tsx` y vista de verificación `/kit`.
-  - Implementación de páginas de autenticación con **Botón de Google** (`BotonGoogle.tsx`), traslado del campo de información bancaria desde el registro hacia el **Panel de Artista** (`ArtistaPerfilPage.tsx`), catálogo con esfera 3D (`EsferaCatalogo3D.tsx`), ficha de obra, verificación de certificados, panel de artista, panel de curaduría, `InicioPage.tsx`, `ArtistasPage.tsx` y páginas institucionales/legales.
+- **Frontend e Identidad Visual (Consolidado y documentado en `design.md`):**
+  - Consolidación del sistema de diseño en `design.md` y `frontend/src/index.css` con la atmósfera *"Piedra Basalto Cálida (`#1b1a18`) & Oro Champán (`#d8b888`)"*, las 3 voces tipográficas (*Playfair Display*, *Cormorant Garamond*, *Anton*), los 3 niveles de ambiente visual (`Ambiente.tsx`), los isotipos oficiales en `frontend/4x/` (`LogoMarca.tsx`) y el catálogo vivo `/kit`.
+  - Portada escénica (`InicioPage.tsx`) con scroll natural, arco y rieles dorados más bloque curatorial *Galería Palacio Nacional*; navegación superior (`Header.tsx`) con mega-menús hacia *Sala Palacio Nacional* (`/sala-palacio-nacional/*`), *Artistas* (`/artistas`), *Exposiciones* (`/exposiciones`), *Arte* (`/arte`), *Colecciones* (`/colecciones`) y *Más* (`/mas`).
+  - Catálogo Masonry con tarjetas en doble estado (pintura enmarcada en sala de galería o estudio contemporáneo en reposo, y obra completa en hover), `ObraLightbox` sincronizado con `?obra=<slug>` y **Visor 3D volumétrico a escala humana (`1.75 m`)** (`ObraVisor3DModal.tsx`).
+  - Flujos de acceso en cápsula (`AuthCard.tsx`) con morphing cohesivo entre escenas, **Botón de Google** (`BotonGoogle.tsx`), registro bancario diferido al **Panel del Artista** (`ArtistaPerfilPage.tsx`), verificación de certificados, carrito/checkout (`/carrito`), cuenta (`/cuenta`), páginas legales (`/legal/*`) y paneles protegidos para Artista (`/artista/*`), Curador (`/curaduria`) y Administrador (`/institucional`).
 - **Documentación e Ingeniería de Software (`Doc/`):**
   - Modelo Entidad-Relación en alta resolución (`Modelo_Entidad_Relacion_Pixel_y_Lienzo.svg`).
   - **22 Casos de Uso documentados** para los 4 roles con **5 Diagramas UML vectoriales (`.svg`)** y diagramas de secuencia en `Doc/Casos_de_Uso/`.
@@ -102,11 +104,8 @@ Se ejecutó una suite automatizada contra la aplicación FastAPI y la base de da
 4. **Correcciones de negocio resueltas durante el desarrollo:** Se corrigió la inserción prematura de trazabilidad para que solo ocurra al confirmarse el pago en Wompi, se añadió tiempo de expiración (`expiration-time`) para liberar reservas abandonadas y se unificó la ruta de activos gráficos `4x` dentro de `frontend/`.
 
 ### 5.3. Próximos Pasos para el Cierre Total
-1. **Conectar vistas faltantes en el enrutador de React (`frontend/src/`):**
-   - Crear los clientes `api/envios.ts`, `api/reclamaciones.ts`, `api/usuarios.ts` y `api/auditoria.ts`.
-   - Conectar las acciones de seguimiento de guía y reclamación en `MisComprasPage.tsx` (`HU-06`).
-   - Habilitar la ruta protegida `/admin` para el rol `Administrador` (`HU-08`) y exponer en `App.tsx` las rutas hacia `InicioPage`, `ArtistasPage` y páginas institucionales (`HU-05`).
-   - Implementar la persistencia temporal en `frontend/src/lib/compraPendiente.ts` (`HU-07`).
+1. **Completar integraciones operativas pendientes en `frontend/src/`:**
+   - Completar los clientes de API para seguimiento logístico y auditoría (`envios`, `reclamaciones`, `usuarios`, `auditoria`) y conectar sus acciones detalladas en `MisComprasPage.tsx` (`HU-06`) y `PanelInstitucionalPage` (`/institucional`, `HU-08`).
 2. **Ejecución manual en navegador de los 12 casos de usabilidad UI (`MODx-UI-xx`):** Validar visualmente en escritorio y vista móvil (`390 px`) los 12 casos de interfaz para pasarlos de `BLOQUEADO` a `OK`.
 3. **Configuración de credenciales externas de producción/sandbox:** Configurar `GOOGLE_CLIENT_ID` / `VITE_GOOGLE_CLIENT_ID`, llaves de Wompi con túnel público (`ngrok` o dominio real) y servidor SMTP real para envío de correos fuera de la consola de desarrollo.
 

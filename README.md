@@ -58,9 +58,15 @@ El sistema está diseñado de forma modular, abarcando el ciclo de vida completo
 
 ### Frontend (`/frontend`)
 - **Framework:** **React 19** + **TypeScript** + **Vite 8**
-- **Estilos y UI:** **Tailwind CSS v4**, `lucide-react`, `clsx`
-- **Animaciones y Experiencia Visual:** **Framer Motion** (carrusel cilíndrico 3D, grillas en perspectiva, tarjetas expandibles)
-- **Estado y Red:** `@tanstack/react-query`, `axios`, `react-hook-form`, `react-router-dom v7`
+- **Estilos y Sistema de Diseño:** **Tailwind CSS v4**, `lucide-react`, `clsx`, tokens globales en `src/index.css` y arquitectura escénica en `src/styles/escena.css` (documentados en [`design.md`](./design.md))
+- **Experiencia Visual y Museográfica:** Identidad *"Piedra Basalto Cálida & Oro Champán Luminoso"* estructurada en 3 niveles de intensidad visual (`Ambiente`), portada con arco arquitectónico y scroll natural, catálogo Masonry con puesta en escena en sala/estudio, Lightbox sincronizado por URL, **Visor 3D volumétrico a escala humana (`1.75 m`)** y Estudio Motion con **Framer Motion**
+- **Estado, Autenticación y Red:** `@tanstack/react-query`, `axios`, `jwt-decode` (JWT + MFA + Google Identity Services), `react-hook-form`, `react-router-dom v7` y `oxlint`
+
+---
+
+## 🎨 Diseño Visual y Marca ([`design.md`](./design.md))
+
+Toda la arquitectura visual actual —paleta *Piedra Basalto Cálida (`#1b1a18`) & Oro Champán (`#d8b888`)*, las tres voces tipográficas (*Playfair Display*, *Cormorant Garamond* y *Anton*), los 3 niveles escénicos, la puesta en escena de obras y las variantes del isotipo en `frontend/4x/`— está sintetizada en [**`design.md`**](./design.md).
 
 ---
 
@@ -68,31 +74,41 @@ El sistema está diseñado de forma modular, abarcando el ciclo de vida completo
 
 ```text
 pixel_lienzo/
+├── design.md                       # Síntesis maestra del sistema de diseño visual vigente
 ├── backend/                        # API REST en FastAPI
 │   ├── alembic/                    # Migraciones de esquema de base de datos
 │   ├── app/
 │   │   ├── api/v1/endpoints/       # Endpoints divididos en los 5 módulos
 │   │   ├── core/                   # Configuración (.env), conexión BD y seguridad JWT
 │   │   ├── db/                     # Seeds automáticos (roles y configuración inicial)
-│   │   ├── models/                 # Modelos ORM SQLAlchemy (12+ tablas)
+│   │   ├── models/                 # Modelos ORM SQLAlchemy (13 tablas)
 │   │   ├── schemas/                # Esquemas de validación Pydantic
-│   │   ├── services/               # Lógica de negocio (Wompi, Trust Engine, OTP, Auditoría, etc.)
+│   │   ├── services/               # Lógica de negocio (Wompi, Trust Engine, Google OAuth, OTP, Auditoría)
 │   │   └── main.py                 # Punto de entrada de la API + CORS + archivos estáticos
 │   ├── scripts/                    # Scripts de pruebas automatizadas y simulador de webhooks
 │   ├── requirements.txt            # Dependencias de Python
 │   └── README.md                   # Documentación técnica detallada del Backend
 │
-├── frontend/                       # Aplicación SPA en React + TypeScript
+├── frontend/                       # Aplicación SPA en React 19 + TypeScript + Vite 8
+│   ├── 4x/                         # Recursos maestros e isotipos oficiales (8 PNG + .ai)
 │   ├── src/
-│   │   ├── components/             # Componentes reutilizables, layout y animaciones motion
-│   │   ├── pages/                  # Vistas públicas, catálogo, artistas y paneles por rol
-│   │   ├── lib/                    # Cliente Axios, utilidades y estado de compra
-│   │   └── App.tsx                 # Configuración de rutas y proveedores
+│   │   ├── api/                    # Clientes Axios por dominio
+│   │   ├── assets/                 # Fuentes locales (.woff2) e isotipos tipados (4x/ y logos/)
+│   │   ├── components/             # auth/, catalogo/ (Lightbox + Visor 3D), escena/, layout/, motion/, ui/
+│   │   ├── context/                # AuthContext, CartContext y ToastContext
+│   │   ├── lib/                    # Formateo, navegación por rol, obras de muestra y transiciones de escena
+│   │   ├── pages/                  # Inicio, Sala Palacio, Catálogo Masonry, Detalle, Auth y Paneles por rol
+│   │   ├── styles/                 # Estilos de escena arquitectónica (escena.css)
+│   │   └── App.tsx                 # Configuración de rutas públicas, curatoriales y protegidas
+│   ├── README.md                   # Documentación técnica del Frontend
 │   └── package.json                # Dependencias y scripts de Node.js
 │
 ├── Doc/                            # Documentación del proyecto y artefactos de ingeniería
+│   ├── Informe_General_Proyecto_Pixel_y_Lienzo.md
+│   ├── Kit de Identidad Visual - Pixel & Lienzo.docx
+│   ├── Guía de interfaces de Pixel & Lienzo.docx
+│   ├── Casos_de_Uso/               # Especificaciones y diagramas UML por rol
 │   ├── pixel_lienzo_db/            # Dumps SQL del esquema y datos de la base de datos
-│   ├── Diagramas_Arquitectura...   # Documentos de arquitectura y mantenibilidad
 │   └── Plan_de_Pruebas...          # Políticas, planes y matrices de casos de prueba (QA)
 │
 └── README.md                       # Este archivo (Guía general del proyecto)
